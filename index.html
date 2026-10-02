@@ -789,6 +789,15 @@
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
+    // REGISTRAZIONE SERVICE WORKER
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(() => console.log('Service Worker registrato!'))
+          .catch(err => console.log('Errore SW:', err));
+      });
+    }
+
     initUI();
   </script>
 </body>
