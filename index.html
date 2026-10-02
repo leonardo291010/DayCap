@@ -5,216 +5,590 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>DayCap</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: #182232;
+      --accent-gradient: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+      --btn-primary: #38bdf8;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #000;
-      color: #fff;
-      padding-bottom: 70px;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    header {
-      position: sticky;
-      top: 0;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(10px);
-      padding: 14px 20px;
-      border-bottom: 1px solid #1c1c1e;
-      z-index: 20;
-      display: flex;
-      justify-content: space-between;
+    body {
+      background-color: var(--bg-color);
+      color: var(--text);
+      max-width: 480px;
+      margin: 0 auto;
+      padding-bottom: 90px;
+      min-height: 100vh;
+      box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    }
+
+    /* Modali */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      justify-content: center;
       align-items: center;
+      flex-direction: column;
+      padding: 20px;
     }
 
-    h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
-    .slot-badge { font-size: 0.75rem; background: #1c1c1e; color: #0a84ff; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
-
-    main { padding: 16px; max-width: 500px; margin: 0 auto; }
-
-    /* SEZIONI NAVIGAZIONE */
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    /* VISTA 1: HOME (GALLERIA) */
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-
-    .photo-card {
-      background: #1c1c1e;
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
       border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid #2c2c2e;
-    }
-
-    .photo-card img {
+      padding: 20px;
       width: 100%;
-      aspect-ratio: 3/4;
-      object-fit: cover;
-      display: block;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
     }
 
-    .photo-time {
-      padding: 10px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #0a84ff;
+    /* Auth Screen */
+    #auth-screen {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--bg-color);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 30px;
       text-align: center;
     }
 
-    .empty-state {
-      grid-column: 1 / -1;
-      padding: 60px 20px;
-      text-align: center;
-      color: #636366;
-    }
-
-    /* VISTA FOTOCAMERA */
-    #camera-view { display: none; }
-
-    .camera-container {
-      position: relative;
-      width: 100%;
-      border-radius: 20px;
-      overflow: hidden;
-      background: #1c1c1e;
-      aspect-ratio: 3/4;
-      margin-bottom: 20px;
-    }
-    
-    video, canvas { width: 100%; height: 100%; object-fit: cover; }
-    canvas { display: none; }
-
-    /* PULSANTI */
-    .btn {
-      background: #0a84ff;
-      color: white;
-      border: none;
-      padding: 16px;
-      width: 100%;
-      font-size: 1rem;
-      font-weight: bold;
-      border-radius: 30px;
-      cursor: pointer;
-    }
-
-    .btn:disabled { background: #2c2c2e; color: #636366; cursor: not-allowed; }
-    .btn-secondary { background: #1c1c1e; color: #fff; margin-top: 10px; }
-
-    /* TAB BAR IN BASSO (STYLE INSTAGRAM/TIKTOK) */
-    .tab-bar {
+    /* Navigazione */
+    .nav-bar {
       position: fixed;
       bottom: 0;
-      left: 0;
-      right: 0;
-      height: 60px;
-      background: rgba(18, 18, 18, 0.95);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      background: rgba(24, 34, 50, 0.95);
       backdrop-filter: blur(10px);
-      border-top: 1px solid #1c1c1e;
+      border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-around;
-      align-items: center;
-      z-index: 100;
+      padding: 12px 0;
+      z-index: 900;
     }
 
-    .tab-item {
+    .nav-btn {
       background: none;
       border: none;
-      color: #636366;
+      color: var(--text-muted);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 3px;
-      font-size: 0.65rem;
-      cursor: pointer;
-      width: 25%;
+      gap: 4px;
     }
 
-    .tab-item svg { width: 22px; height: 22px; fill: currentColor; }
-    .tab-item.active { color: #fff; }
-    .tab-item.camera-tab { color: #0a84ff; }
+    .nav-btn.active { color: var(--btn-primary); }
+
+    .tab-content { display: none; padding: 15px; }
+    .tab-content.active { display: block; }
+
+    /* Profilo */
+    .profile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      padding: 10px 5px;
+    }
+
+    .avatar-container {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      padding: 3px;
+      background: var(--border); /* Default senza bordo rosa */
+    }
+
+    .avatar-container.has-new-story {
+      background: var(--accent-gradient); /* Bordo rosa solo se ci sono nuove storie */
+    }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      border: 3px solid var(--bg-color);
+    }
+
+    .profile-stats {
+      display: flex;
+      gap: 20px;
+      text-align: center;
+    }
+
+    .stat-box { cursor: pointer; }
+    .stat-box h4 { font-size: 1.1rem; color: var(--text); }
+    .stat-box p { font-size: 0.8rem; color: var(--text-muted); }
+
+    .btn {
+      background-color: var(--btn-primary);
+      color: #000;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+      width: 100%;
+      text-align: center;
+    }
+
+    .btn-secondary { background: var(--border); color: var(--text); }
+
+    input[type="text"], input[type="email"] {
+      width: 100%;
+      padding: 12px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: white;
+      margin: 8px 0;
+    }
+
+    .featured-container {
+      display: flex;
+      gap: 15px;
+      overflow-x: auto;
+      padding: 10px 0;
+      margin-bottom: 20px;
+    }
+
+    .featured-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .featured-ring {
+      width: 64px; height: 64px;
+      border-radius: 50%; padding: 2px;
+      background: var(--border);
+    }
+
+    .featured-ring img {
+      width: 100%; height: 100%;
+      border-radius: 50%; object-fit: cover;
+    }
+
+    .user-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .circle-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .timeline { display: flex; flex-direction: column; gap: 12px; }
+    .hour-slot {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    input[type="file"] { display: none; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>DayCap 📸</h1>
-    <span id="current-slot-badge" class="slot-badge">Ora attuale: --:00</span>
-  </header>
+  <!-- Schermata Primo Accesso -->
+  <div id="auth-screen">
+    <h1 style="font-size: 2.2rem; color: var(--btn-primary); margin-bottom: 10px;">DayCap 📸</h1>
+    <p style="color: var(--text-muted); margin-bottom: 25px;">Il tuo diario fotografico condiviso a cerchie.</p>
+    
+    <input type="email" id="auth-email" placeholder="La tua email...">
+    <input type="text" id="auth-username" placeholder="Nome utente desiderato...">
+    <button class="btn" style="margin-top: 10px;" onclick="handleRegister()">Registrati su DayCap</button>
+  </div>
 
-  <main>
-    <!-- TAB 1: HOME PAGE -->
-    <section id="tab-home" class="tab-content active">
-      <div id="gallery" class="gallery-grid">
-        <div id="empty-state" class="empty-state">
-          <p style="font-size: 1.1rem; color: #fff; margin-bottom: 6px;">Nessuno scatto salvato per quest'ora</p>
-          <p>Scatta una foto prima dello scadere dell'ora!</p>
+  <!-- TAB PROFILO -->
+  <div id="tab-profile" class="tab-content active">
+    <div class="profile-header">
+      <div class="avatar-container" id="avatar-ring">
+        <div class="avatar-img" id="avatar-display">U</div>
+      </div>
+      <div class="profile-stats">
+        <div class="stat-box" onclick="openUsersModal('followers')">
+          <h4 id="follower-count">0</h4>
+          <p>Follower</p>
+        </div>
+        <div class="stat-box" onclick="openUsersModal('following')">
+          <h4 id="following-count">0</h4>
+          <p>Seguiti</p>
         </div>
       </div>
-    </section>
+    </div>
 
-    <!-- TAB 2: CERCHIA -->
-    <section id="tab-circle" class="tab-content">
-      <div class="empty-state">
-        <p style="font-size: 1.1rem; color: #fff; margin-bottom: 6px;">👥 Cerchia</p>
-        <p>Aggiungi i tuoi amici per vedere i loro scatti orari.</p>
+    <div style="margin-bottom: 15px;">
+      <h3 id="username-display">@username</h3>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">DayCap Member</p>
+    </div>
+
+    <button class="btn btn-secondary" onclick="openEditUsernameModal()" style="margin-bottom: 15px;">Modifica Nome Utente</button>
+
+    <h4 style="margin-bottom: 8px;">Storie in Evidenza</h4>
+    <div class="featured-container" id="featured-container">
+      <div class="featured-item">
+        <label class="featured-ring" style="display:flex; align-items:center; justify-content:center; background:var(--card-bg); border: 2px dashed var(--border); cursor:pointer;">
+          ➕
+          <input type="file" accept="image/*" onchange="addHighlightPhoto(event)">
+        </label>
+        <span style="font-size: 0.7rem; color: var(--text-muted);">Aggiungi</span>
       </div>
-    </section>
+    </div>
 
-    <!-- TAB 3: MESSAGGI -->
-    <section id="tab-messages" class="tab-content">
-      <div class="empty-state">
-        <p style="font-size: 1.1rem; color: #fff; margin-bottom: 6px;">💬 Messaggi</p>
-        <p>Chatta con la tua cerchia sui singoli scatti.</p>
+    <h4 style="margin-bottom: 8px;">Cerca Utenti Reali</h4>
+    <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+      <input type="text" id="search-username" placeholder="Cerca username..." style="margin:0;">
+      <button class="btn" style="width: auto;" onclick="searchUser()">Cerca</button>
+    </div>
+  </div>
+
+  <!-- TAB CERCHIE -->
+  <div id="tab-circles" class="tab-content">
+    <div id="circles-list-view">
+      <h2 style="margin-bottom: 15px;">Cerchie DayCap</h2>
+      <button class="btn" style="margin-bottom: 15px;" onclick="openModal('create-circle-modal')">+ Crea Cerchia</button>
+      <button class="btn btn-secondary" style="margin-bottom: 20px;" onclick="joinCircleByCodePrompt()">🔑 Unisciti con Codice</button>
+
+      <div id="circles-container">
+        <p style="color: var(--text-muted); text-align: center; margin-top: 20px;">Non fai ancora parte di nessuna cerchia.</p>
       </div>
-    </section>
+    </div>
 
-    <!-- TAB 4: PROFILO -->
-    <section id="tab-profile" class="tab-content">
-      <div class="empty-state">
-        <p style="font-size: 1.1rem; color: #fff; margin-bottom: 6px;">👤 Il tuo Profilo</p>
-        <p>Qui vedrai lo storico dei tuoi giorni passati.</p>
-      </div>
-    </section>
+    <div id="circle-detail-view" style="display: none;">
+      <button class="btn btn-secondary" style="width:auto; margin-bottom: 15px;" onclick="closeCircle()">&larr; Indietro</button>
+      <h2 id="circle-title">Nome Cerchia</h2>
+      <p id="circle-code-display" style="color: var(--btn-primary); font-size:0.85rem; margin-bottom: 15px;"></p>
 
-    <!-- SCHERMATA FOTOCAMERA (MODALE) -->
-    <section id="camera-view">
-      <div class="camera-container">
-        <video id="webcam" autoplay playsinline></video>
-        <canvas id="canvas"></canvas>
+      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button class="btn" onclick="openCamera()">📷 Scatta</button>
+        <label class="btn btn-secondary">
+          📁 Carica
+          <input type="file" id="file-input" accept="image/*" multiple onchange="handleFileSelect(event)">
+        </label>
       </div>
 
-      <button id="snap-btn" class="btn">📸 Scatta e Pubblica</button>
-      <button id="back-btn" class="btn btn-secondary">Annulla</button>
-    </section>
-  </main>
+      <h3 style="margin-bottom: 10px;">Timeline 24 Ore</h3>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </div>
 
-  <!-- NAVBAR IN BASSO -->
-  <nav class="tab-bar">
-    <button class="tab-item active" data-tab="tab-home">
-      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-      Home
+  <!-- Modal Modifica Username -->
+  <div class="modal" id="username-modal">
+    <div class="modal-content">
+      <h3>Modifica Username</h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">Massimo una modifica ogni 14 giorni.</p>
+      <input type="text" id="new-username-input" placeholder="Nuovo username...">
+      <button class="btn" onclick="saveUsername()">Salva</button>
+      <button class="btn btn-secondary" style="margin-top:5px;" onclick="closeModal('username-modal')">Annulla</button>
+    </div>
+  </div>
+
+  <!-- Modal Mostra Follower / Seguiti con Cerca -->
+  <div class="modal" id="users-modal">
+    <div class="modal-content">
+      <h3 id="users-modal-title">Lista Utenti</h3>
+      <input type="text" id="users-search-input" placeholder="Filtra per nome..." oninput="filterUsersList()">
+      <div id="users-list-container" style="margin-top: 10px;"></div>
+      <button class="btn btn-secondary" style="margin-top:15px;" onclick="closeModal('users-modal')">Chiudi</button>
+    </div>
+  </div>
+
+  <!-- Modal Crea Cerchia -->
+  <div class="modal" id="create-circle-modal">
+    <div class="modal-content">
+      <h3>Crea Cerchia DayCap</h3>
+      <input type="text" id="circle-name-input" placeholder="Nome cerchia...">
+      <button class="btn" onclick="createCircle()">Crea</button>
+      <button class="btn btn-secondary" style="margin-top:5px;" onclick="closeModal('create-circle-modal')">Annulla</button>
+    </div>
+  </div>
+
+  <!-- Modal Camera -->
+  <div class="modal" id="camera-modal">
+    <video id="video" autoplay playsinline style="width: 100%; max-width: 300px; border-radius: 12px; background:#000;"></video>
+    <div style="display:flex; gap:10px; margin-top: 15px;">
+      <button class="btn" onclick="takeSnapshot()">📸 Scatta</button>
+      <button class="btn btn-secondary" onclick="closeCamera()">Annulla</button>
+    </div>
+    <canvas id="canvas" style="display:none;"></canvas>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="nav-bar">
+    <button class="nav-btn active" onclick="switchTab('tab-profile', this)">
+      <span>👤</span> Profilo
     </button>
-    <button class="tab-item" data-tab="tab-circle">
-      <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-      Cerchia
-    </button>
-    <button class="tab-item camera-tab" id="nav-camera-btn">
-      <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
-      Scatta
-    </button>
-    <button class="tab-item" data-tab="tab-messages">
-      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
-      Messaggi
-    </button>
-    <button class="tab-item" data-tab="tab-profile">
-      <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-      Profilo
+    <button class="nav-btn" onclick="switchTab('tab-circles', this)">
+      <span>🏆</span> Cerchie
     </button>
   </nav>
 
-  <script src="app.js"></script>
+  <script>
+    /* Dati dell'Utente */
+    let userData = JSON.parse(localStorage.getItem('daycap_userData')) || null;
+    let userCircles = JSON.parse(localStorage.getItem('daycap_circles')) || [];
+    let activeModalList = [];
+    const dayData = Array.from({ length: 24 }, () => ({ photos: [] }));
+
+    function handleRegister() {
+      const email = document.getElementById('auth-email').value.trim();
+      const username = document.getElementById('auth-username').value.trim();
+
+      if (!email || !username) {
+        alert("Inserisci un'email e un nome utente validi.");
+        return;
+      }
+
+      userData = {
+        email: email,
+        username: username,
+        lastUsernameChange: null,
+        followers: [], // Inizia da ZERO
+        following: [], // Inizia da ZERO
+        highlights: []  // Storie salvate con timestamp
+      };
+
+      localStorage.setItem('daycap_userData', JSON.stringify(userData));
+      document.getElementById('auth-screen').style.display = 'none';
+      alert(`🎉 Registrazione completata! Una mail di simulazione è stata inviata a: ${email}`);
+      initUI();
+    }
+
+    function initUI() {
+      if (!userData) {
+        document.getElementById('auth-screen').style.display = 'flex';
+        return;
+      }
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('username-display').innerText = "@" + userData.username;
+      document.getElementById('avatar-display').innerText = userData.username.charAt(0).toUpperCase();
+      document.getElementById('follower-count').innerText = userData.followers.length;
+      document.getElementById('following-count').innerText = userData.following.length;
+
+      checkStoryRingStatus();
+      renderHighlights();
+      renderCirclesList();
+    }
+
+    /* Gestione Cerchio Rosa Attorno al Profilo */
+    function checkStoryRingStatus() {
+      const ring = document.getElementById('avatar-ring');
+      const now = new Date().getTime();
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+
+      // Mostra il bordo sfumato solo se c'è almeno 1 storia creata nelle ultime 24 ore
+      const hasRecentStory = userData.highlights.some(h => (now - h.timestamp) < twentyFourHours);
+      
+      if (hasRecentStory) {
+        ring.classList.add('has-new-story');
+      } else {
+        ring.classList.remove('has-new-story');
+      }
+    }
+
+    function addHighlightPhoto(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        userData.highlights.push({
+          img: e.target.result,
+          timestamp: new Date().getTime()
+        });
+        localStorage.setItem('daycap_userData', JSON.stringify(userData));
+        checkStoryRingStatus();
+        renderHighlights();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderHighlights() {
+      const container = document.getElementById('featured-container');
+      const addBtnHTML = container.children[0].outerHTML;
+
+      const itemsHTML = userData.highlights.map(h => `
+        <div class="featured-item">
+          <div class="featured-ring">
+            <img src="${h.img}">
+          </div>
+        </div>
+      `).join('');
+
+      container.innerHTML = addBtnHTML + itemsHTML;
+    }
+
+    /* Modale Lista Follower / Seguiti */
+    function openUsersModal(type) {
+      activeModalList = (type === 'followers') ? userData.followers : userData.following;
+      document.getElementById('users-modal-title').innerText = (type === 'followers') ? 'I Tuoi Follower' : 'Persone Seguite';
+      document.getElementById('users-search-input').value = '';
+      openModal('users-modal');
+      filterUsersList();
+    }
+
+    function filterUsersList() {
+      const query = document.getElementById('users-search-input').value.toLowerCase();
+      const container = document.getElementById('users-list-container');
+
+      const filtered = activeModalList.filter(name => name.toLowerCase().includes(query));
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; padding:10px 0;">Nessun utente trovato.</p>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(name => `
+        <div class="user-list-item">
+          <span>@${name}</span>
+        </div>
+      `).join('');
+    }
+
+    function searchUser() {
+      const name = document.getElementById('search-username').value.trim();
+      if (!name) return;
+      alert(`Nessun utente trovato con il nome @${name}. Invita i tuoi amici a iscriversi a DayCap!`);
+    }
+
+    /* Modifica Username (14 Giorni) */
+    function openEditUsernameModal() { openModal('username-modal'); }
+
+    function saveUsername() {
+      const newName = document.getElementById('new-username-input').value.trim();
+      if (!newName) return;
+
+      const now = new Date().getTime();
+      const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+
+      if (userData.lastUsernameChange && (now - userData.lastUsernameChange < fourteenDays)) {
+        const remainingDays = Math.ceil((fourteenDays - (now - userData.lastUsernameChange)) / (1000 * 60 * 60 * 24));
+        alert(`Impossibile modificare. Attendi ancora ${remainingDays} giorni.`);
+        return;
+      }
+
+      userData.username = newName;
+      userData.lastUsernameChange = now;
+      localStorage.setItem('daycap_userData', JSON.stringify(userData));
+      initUI();
+      closeModal('username-modal');
+    }
+
+    /* Cerchie */
+    function createCircle() {
+      const name = document.getElementById('circle-name-input').value.trim();
+      if (!name) return;
+
+      const circle = {
+        id: "DAYCAP-" + Math.floor(1000 + Math.random() * 9000),
+        name: name
+      };
+
+      userCircles.push(circle);
+      localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
+      closeModal('create-circle-modal');
+      renderCirclesList();
+    }
+
+    function renderCirclesList() {
+      const container = document.getElementById('circles-container');
+      if (userCircles.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 20px;">Non fai ancora parte di nessuna cerchia.</p>';
+        return;
+      }
+
+      container.innerHTML = userCircles.map((circle, idx) => `
+        <div class="circle-card">
+          <h3>${circle.name}</h3>
+          <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:10px;">Codice: ${circle.id}</p>
+          <button class="btn" onclick="openCircle(${idx})">Entra nella Cerchia</button>
+        </div>
+      `).join('');
+    }
+
+    function openCircle(index) {
+      document.getElementById('circle-title').innerText = userCircles[index].name;
+      document.getElementById('circle-code-display').innerText = "Codice invito: " + userCircles[index].id;
+      document.getElementById('circles-list-view').style.display = 'none';
+      document.getElementById('circle-detail-view').style.display = 'block';
+      renderTimeline();
+    }
+
+    function closeCircle() {
+      document.getElementById('circles-list-view').style.display = 'block';
+      document.getElementById('circle-detail-view').style.display = 'none';
+    }
+
+    function renderTimeline() {
+      const container = document.getElementById('timeline');
+      container.innerHTML = '';
+      for (let hour = 0; hour < 24; hour++) {
+        const slot = dayData[hour];
+        const hourLabel = `${String(hour).padStart(2, '0')}:00`;
+        const slotEl = document.createElement('div');
+        slotEl.className = 'hour-slot';
+        slotEl.innerHTML = `
+          <div style="font-weight:bold; font-size:0.85rem; color:var(--btn-primary);">Fascia ${hourLabel}</div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">${slot.photos.length} foto presenti</div>
+        `;
+        container.appendChild(slotEl);
+      }
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    initUI();
+  </script>
 </body>
 </html>
