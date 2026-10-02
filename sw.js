@@ -1,7 +1,13 @@
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open('daycap-v1').then((cache) => {
-      return cache.addAll(['./', './index.html', './manifest.json']);
+      return cache.addAll([
+        './',
+        './index.html',
+        './manifest.json',
+        './icon-192.png',
+        './icon-512.png'
+      ]);
     })
   );
 });
