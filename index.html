@@ -6,9 +6,53 @@
   <title>DayCap</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, sans-serif; background: #121212; color: #fff; text-align: center; padding: 20px; }
-    h1 { margin-bottom: 20px; font-size: 1.8rem; }
+    body { font-family: system-ui, sans-serif; background: #121212; color: #fff; text-align: center; padding: 16px; }
     
+    header { margin-bottom: 24px; }
+    h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; }
+    p.subtitle { color: #8e8e93; font-size: 0.9rem; margin-top: 4px; }
+
+    /* Schermata Home / Galleria */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 80px;
+    }
+
+    .photo-card {
+      background: #1c1c1e;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #2c2c2e;
+    }
+
+    .photo-card img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+    }
+
+    .photo-time {
+      padding: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #0a84ff;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      padding: 40px 20px;
+      color: #636366;
+    }
+
+    /* Vista Fotocamera (Nascosta all'inizio) */
+    #camera-view {
+      display: none;
+    }
+
     .camera-container {
       position: relative;
       width: 100%;
@@ -31,8 +75,9 @@
 
     canvas { display: none; }
 
+    /* Pulsanti */
     .btn {
-      background: #007aff;
+      background: #0a84ff;
       color: white;
       border: none;
       padding: 14px 28px;
@@ -40,24 +85,54 @@
       font-weight: bold;
       border-radius: 30px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.2s, transform 0.1s;
     }
 
-    .btn:active { background: #0056b3; }
-    .btn:disabled { background: #444; cursor: not-allowed; }
+    .btn:active { transform: scale(0.98); }
+    .btn-secondary { background: #2c2c2e; color: #fff; margin-top: 12px; }
+
+    .bottom-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
   </style>
 </head>
 <body>
 
-  <h1>DayCap 📸</h1>
+  <header>
+    <h1>DayCap 📸</h1>
+    <p class="subtitle">Il tuo diario orario visivo</p>
+  </header>
 
-  <div class="camera-container">
-    <video id="webcam" autoplay playsinline></video>
-    <canvas id="canvas"></canvas>
-    <img id="photo-preview" alt="Anteprima foto" style="display: none;" />
-  </div>
+  <!-- VISTA 1: HOME / GALLERIA -->
+  <main id="home-view">
+    <div id="gallery" class="gallery-grid">
+      <div class="empty-state">
+        <p>Nessuno scatto salvato oggi.</p>
+        <p style="font-size: 0.8rem; margin-top: 6px;">Premie "Scatta Foto" per iniziare!</p>
+      </div>
+    </div>
 
-  <button id="snap-btn" class="btn">Scatta Foto</button>
+    <div class="bottom-bar">
+      <button id="open-camera-btn" class="btn">➕ Scatta Foto</button>
+    </div>
+  </main>
+
+  <!-- VISTA 2: FOTOCAMERA -->
+  <main id="camera-view">
+    <div class="camera-container">
+      <video id="webcam" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+      <img id="photo-preview" alt="Anteprima foto" style="display: none;" />
+    </div>
+
+    <button id="snap-btn" class="btn">📸 Scatta ora</button>
+    <br>
+    <button id="back-btn" class="btn btn-secondary">Annulla</button>
+  </main>
 
   <script src="app.js"></script>
 </body>
