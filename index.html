@@ -84,15 +84,16 @@
       <h2 id="username-display" style="font-size:1.4rem; font-weight:700;">@username</h2>
     </div>
 
-    <!-- RICERCA UTENTI -->
-    <div style="margin-bottom: 20px;">
+    <!-- RICERCA UTENTI & ESPLORA -->
+    <div style="margin-bottom: 15px;">
       <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">CERCA PERSONE DA SEGUIRE</label>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:8px; margin-top:4px;">
         <input type="text" id="search-user-input" placeholder="Cerca @username..." style="margin:0;">
         <button class="btn" style="width:auto; padding:0 16px;" onclick="searchAndFollowUser()">Cerca</button>
       </div>
     </div>
 
+    <button class="btn btn-secondary" onclick="openUsersModal('explore')" style="margin-bottom: 10px;">🌍 Esplora tutti gli utenti</button>
     <button class="btn btn-secondary" onclick="openEditUsernameModal()" style="margin-bottom: 20px;">Modifica Profilo</button>
 
     <h4 style="margin-bottom: 10px; font-size:0.95rem;">Storie in Evidenza</h4>
@@ -278,13 +279,12 @@
     let activeSlotHour = null;
     let activeHighlightIndex = null;
 
-    // --- REGISTRAZIONE / PROFILO CLOUD ---
+    // --- REGISTRAZIONE CLOUD ---
     async function handleRegister() {
       const email = document.getElementById('auth-email').value.trim();
       const username = document.getElementById('auth-username').value.trim().replace('@', '');
       if (!email || !username) { alert("Inserisci dati validi."); return; }
 
-      // Salvataggio sul database Supabase (tabella profiles)
       const { error } = await supabaseClient
         .from('profiles')
         .upsert([
@@ -323,12 +323,30 @@
       await loadUserCircles();
     }
 
-    /* FOLLOWER / SEGUITI */
-    function openUsersModal(type) {
+    /* ESPLORA UTENTI E SEGUI */
+    async function openUsersModal(type) {
       const titleEl = document.getElementById('users-modal-title');
       const container = document.getElementById('users-list-container');
       
-      if (type === 'followers') {
+      if (type === 'explore') {
+        titleEl.innerText = 'Esplora Utenti DayCap 🌍';
+        const { data: profiles, error } = await supabaseClient
+          .from('profiles')
+          .select('username, profile_pic');
+
+        if (error || !profiles || profiles.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun utente trovato.</p>';
+        } else {
+          container.innerHTML = profiles
+            .filter(p => p.username !== userData.username)
+            .map(p => `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-main); border-radius: 8px;">
+                <span>@${p.username}</span>
+                <button class="btn" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="followUser('${p.username}')">Segui ➕</button>
+              </div>
+            `).join('');
+        }
+      } else if (type === 'followers') {
         titleEl.innerText = 'I tuoi Follower';
         const list = userData.followers || [];
         if (list.length === 0) {
@@ -358,6 +376,50 @@
       openModal('users-list-modal');
     }
 
+    async function followUser(targetUsername) {
+      if (!userData.following) userData.following = [];
+      if (userData.following.includes(targetUsername)) {
+        alert(`Segui già @${targetUsername}!`);
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from('follows')
+        .insert([{ follower: userData.username, following: targetUsername }]);
+
+      if (error) {
+        alert("Errore nel seguire l'utente: " + error.message);
+        return;
+      }
+
+      userData.following.push(targetUsername);
+      localStorage.setItem('daycap_userData', JSON.stringify(userData));
+      initUI();
+      alert(`Ora segui @${targetUsername}! 🎉`);
+      closeModal('users-list-modal');
+    }
+
+    async function searchAndFollowUser() {
+      const query = document.getElementById('search-user-input').value.trim();
+      if (!query) return;
+
+      const cleanUser = query.replace('@', '');
+      if (cleanUser === userData.username) { alert("Non puoi seguire te stesso!"); return; }
+
+      const { data: foundUser, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('username', cleanUser);
+
+      if (error || !foundUser || foundUser.length === 0) {
+        alert(`L'utente @${cleanUser} non esiste su DayCap! Controlla di aver scritto bene il nome.`);
+        return;
+      }
+
+      await followUser(cleanUser);
+      document.getElementById('search-user-input').value = '';
+    }
+
     function removeUserListItem(type, index) {
       const targetList = type === 'followers' ? userData.followers : userData.following;
       const userName = targetList[index];
@@ -368,31 +430,6 @@
         initUI();
         openUsersModal(type);
       }
-    }
-
-    function searchAndFollowUser() {
-      const query = document.getElementById('search-user-input').value.trim();
-      if (!query) return;
-
-      const cleanUser = query.replace('@', '');
-      if (cleanUser === userData.username) { alert("Non puoi seguire te stesso!"); return; }
-
-      if (cleanUser.length < 2) {
-        alert("Inserisci un username valido.");
-        return;
-      }
-
-      if (!userData.following) userData.following = [];
-
-      if (!userData.following.includes(cleanUser)) {
-        userData.following.push(cleanUser);
-        localStorage.setItem('daycap_userData', JSON.stringify(userData));
-        initUI();
-        alert(`Ora segui @${cleanUser}! 🎉`);
-      } else {
-        alert(`Segui già @${cleanUser}.`);
-      }
-      document.getElementById('search-user-input').value = '';
     }
 
     /* TIMELINE & CARICAMENTO */
@@ -631,7 +668,6 @@
 
       const circleId = "DAYCAP-" + Math.floor(1000 + Math.random() * 9000);
 
-      // 1. Inserisce la cerchia in Supabase
       const { error: circleError } = await supabaseClient
         .from('circles')
         .insert([{ id: circleId, name: name, owner: userData.username }]);
@@ -641,7 +677,6 @@
         return;
       }
 
-      // 2. Aggiunge il creatore come membro nella tabella circle_members
       await supabaseClient
         .from('circle_members')
         .insert([{ circle_id: circleId, username: userData.username }]);
@@ -655,7 +690,6 @@
       const code = document.getElementById('join-circle-code-input').value.trim().toUpperCase();
       if (!code) return;
 
-      // 1. Cerca la cerchia su Supabase
       const { data: foundCircles, error: searchError } = await supabaseClient
         .from('circles')
         .select('*')
@@ -668,7 +702,6 @@
 
       const targetCircle = foundCircles[0];
 
-      // 2. Verifica se sei già membro
       const { data: existingMember } = await supabaseClient
         .from('circle_members')
         .select('*')
@@ -689,7 +722,6 @@
     async function loadUserCircles() {
       if (!userData) return;
 
-      // 1. Trova le cerchie a cui partecipa l'utente
       const { data: memberships, error } = await supabaseClient
         .from('circle_members')
         .select('circle_id')
@@ -703,14 +735,12 @@
 
       const circleIds = memberships.map(m => m.circle_id);
 
-      // 2. Scarica i dettagli delle cerchie da Supabase
       const { data: circlesData } = await supabaseClient
         .from('circles')
         .select('*')
         .in('id', circleIds);
 
       userCircles = circlesData || [];
-      // Assicura la struttura dati locale per la timeline se mancante
       userCircles.forEach(c => {
         if (!c.timelineData) {
           c.timelineData = {
@@ -736,7 +766,6 @@
       const circle = userCircles[activeCircleIndex];
       const container = document.getElementById('circle-members-list');
 
-      // Scarica i membri aggiornati da Supabase per questa cerchia
       const { data: membersData } = await supabaseClient
         .from('circle_members')
         .select('username')
@@ -807,7 +836,6 @@
     async function deleteCircle(index) {
       if (confirm("Sei il proprietario. Vuoi eliminare definitivamente questa cerchia per tutti?")) {
         const circle = userCircles[index];
-        // Elimina i membri e poi la cerchia
         await supabaseClient.from('circle_members').delete().eq('circle_id', circle.id);
         await supabaseClient.from('circles').delete().eq('id', circle.id);
 
