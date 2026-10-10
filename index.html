@@ -41,12 +41,24 @@
       <div class="auth-logo">DayCap</div>
       <p style="color: var(--text-secondary); font-size: 0.95rem;">Condividi le tue giornate con le tue cerchie.</p>
     </div>
+    
+    <!-- SELETTORE MODALITÀ (ACCEDI / REGISTRATI) -->
+    <div style="display:flex; gap:10px; margin-bottom:15px; width:100%; max-width:320px;">
+      <button id="auth-tab-login" class="btn" onclick="switchAuthMode('login')">Accedi</button>
+      <button id="auth-tab-register" class="btn btn-secondary" onclick="switchAuthMode('register')">Registrati</button>
+    </div>
+
+    <!-- FORM DI LOGIN / REGISTRAZIONE -->
     <div class="auth-card">
       <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">EMAIL</label>
       <input type="email" id="auth-email" placeholder="nome@esempio.com">
-      <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">USERNAME</label>
-      <input type="text" id="auth-username" placeholder="@tuousername">
-      <button class="btn" style="margin-top: 10px;" onclick="handleRegister()">Entra in DayCap</button>
+      
+      <div id="username-input-wrapper">
+        <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">USERNAME</label>
+        <input type="text" id="auth-username" placeholder="@tuousername">
+      </div>
+
+      <button id="auth-submit-btn" class="btn" style="margin-top: 10px;" onclick="handleAuthSubmit()">Accedi a DayCap</button>
     </div>
   </div>
 
@@ -168,17 +180,29 @@
   <div class="modal" id="settings-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 15px;">Impostazioni Account ⚙️</h3>
-      <div style="text-align:left; font-size:0.85rem; display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
+      <div style="text-align:left; font-size:0.85rem; display:flex; flex-direction:column; gap:12px; margin-bottom:15px;">
         <div><strong>Tuo ID Univoco:</strong> <span id="settings-user-id" style="color:var(--brand-orange); font-family:monospace;">-</span></div>
-        <div><strong>Email:</strong> <span id="settings-user-email">-</span></div>
         
-        <div style="margin-top:10px;">
+        <!-- CAMBIO EMAIL -->
+        <div>
+          <label style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">EMAIL ATTUALE</label>
+          <input type="email" id="settings-new-email" style="margin-top:4px;">
+          <button class="btn btn-secondary" style="margin-top:4px; padding:6px; font-size:0.8rem;" onclick="updateEmail()">Aggiorna Email</button>
+        </div>
+        
+        <!-- CAMBIO USERNAME -->
+        <div>
           <label style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">CAMBIA USERNAME (Consentito ogni 14 giorni)</label>
           <input type="text" id="settings-new-username" placeholder="Nuovo username..." style="margin-top:4px;">
-          <button class="btn" style="margin-top:6px; padding:8px;" onclick="updateUsername()">Aggiorna Username</button>
+          <button class="btn btn-secondary" style="margin-top:4px; padding:6px; font-size:0.8rem;" onclick="updateUsername()">Aggiorna Username</button>
         </div>
       </div>
-      <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Chiudi</button>
+
+      <!-- DISCONNETTI E CHIUDI -->
+      <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+        <button class="btn btn-danger" onclick="logoutUser()">🚪 Disconnetti Account</button>
+        <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Chiudi</button>
+      </div>
     </div>
   </div>
 
@@ -284,15 +308,15 @@
   </nav>
 
   <script>
-    const ADMIN_EMAIL = "leobri2910@gmail.com"; // Email fissa del creatore supremo
+    const ADMIN_EMAIL = "leobri2910@gmail.com";
 
     let userData = JSON.parse(localStorage.getItem('daycap_userData')) || null;
+    let authMode = 'login'; // 'login' oppure 'register'
     let userCircles = [];
     let activeCircleIndex = null;
     let activeSlotHour = null;
     let activeHighlightIndex = null;
 
-    // Generatore ID univoco casuale di 12 caratteri (es. 381A8SJ4889D)
     function generateUniqueId() {
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
       let result = "";
@@ -302,43 +326,111 @@
       return result;
     }
 
-    // --- REGISTRAZIONE CLOUD CON ID E CONTROLLO UNICITÀ ---
-    async function handleRegister() {
+    /* GESTIONE SWITCH MODALITÀ AUTH (ACCEDI / REGISTRATI) */
+    function switchAuthMode(mode) {
+      authMode = mode;
+      const loginTab = document.getElementById('auth-tab-login');
+      const registerTab = document.getElementById('auth-tab-register');
+      const usernameWrapper = document.getElementById('username-input-wrapper');
+      const submitBtn = document.getElementById('auth-submit-btn');
+
+      if (mode === 'login') {
+        loginTab.className = 'btn';
+        registerTab.className = 'btn btn-secondary';
+        usernameWrapper.style.display = 'none';
+        submitBtn.innerText = 'Accedi a DayCap';
+      } else {
+        loginTab.className = 'btn btn-secondary';
+        registerTab.className = 'btn';
+        usernameWrapper.style.display = 'block';
+        submitBtn.innerText = 'Registrati in DayCap';
+      }
+    }
+
+    /* GESTIONE SUBMIT AUTH (LOGIN O REGISTRAZIONE CON VERIFICA) */
+    async function handleAuthSubmit() {
       const email = document.getElementById('auth-email').value.trim().toLowerCase();
-      const username = document.getElementById('auth-username').value.trim().replace('@', '');
-      if (!email || !username) { alert("Inserisci dati validi."); return; }
+      if (!email) { alert("Inserisci una mail valida."); return; }
 
-      // Verifica se l'username esiste già
-      const { data: existingUser } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('username', username);
+      if (authMode === 'login') {
+        // VERIFICA ESISTENZA EMAIL
+        const { data: userProfile, error } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('email', email)
+          .single();
 
-      if (existingUser && existingUser.length > 0) {
-        alert("Questo username è già occupato! Scegline un altro.");
-        return;
+        if (error || !userProfile) {
+          alert("Nessun account trovato con questa email. Registrati prima!");
+          return;
+        }
+
+        userData = {
+          id: userProfile.id,
+          email: userProfile.email,
+          username: userProfile.username,
+          profilePic: userProfile.profile_pic || null,
+          followers: [],
+          following: [],
+          highlights: [],
+          last_username_change: userProfile.last_username_change
+        };
+        localStorage.setItem('daycap_userData', JSON.stringify(userData));
+        initUI();
+        alert(`Bentornato, @${userData.username}! 👋`);
+
+      } else {
+        // REGISTRAZIONE NUOVO UTENTE
+        const username = document.getElementById('auth-username').value.trim().replace('@', '');
+        if (!username) { alert("Inserisci uno username valido."); return; }
+
+        // Verifica se l'email esiste già
+        const { data: existingEmail } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('email', email);
+
+        if (existingEmail && existingEmail.length > 0) {
+          alert("Questa email è già associata a un account! Fai il Login.");
+          return;
+        }
+
+        // Verifica se l'username esiste già
+        const { data: existingUser } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('username', username);
+
+        if (existingUser && existingUser.length > 0) {
+          alert("Questo username è già occupato! Scegline un altro.");
+          return;
+        }
+
+        const userId = generateUniqueId();
+        const now = new Date().toISOString();
+
+        const { error: regError } = await supabaseClient
+          .from('profiles')
+          .insert([{ id: userId, username: username, email: email, profile_pic: null, last_username_change: now }]);
+
+        if (regError) {
+          alert("Errore durante la registrazione: " + regError.message);
+          return;
+        }
+
+        userData = { id: userId, email, username, profilePic: null, followers: [], following: [], highlights: [], last_username_change: now };
+        localStorage.setItem('daycap_userData', JSON.stringify(userData));
+        initUI();
+        alert(`Benvenuto in DayCap, @${username}! 🎉`);
       }
-
-      const userId = generateUniqueId();
-      const now = new Date().toISOString();
-
-      const { error } = await supabaseClient
-        .from('profiles')
-        .insert([{ id: userId, username: username, email: email, profile_pic: null, last_username_change: now }]);
-
-      if (error) {
-        alert("Errore durante la registrazione su Supabase: " + error.message);
-        return;
-      }
-
-      userData = { id: userId, email, username, profilePic: null, followers: [], following: [], highlights: [], last_username_change: now };
-      localStorage.setItem('daycap_userData', JSON.stringify(userData));
-      initUI();
-      alert(`Benvenuto in DayCap, @${username}! 🎉`);
     }
 
     async function initUI() {
-      if (!userData) { document.getElementById('auth-screen').style.display = 'flex'; return; }
+      if (!userData) { 
+        document.getElementById('auth-screen').style.display = 'flex'; 
+        switchAuthMode('login');
+        return; 
+      }
       document.getElementById('auth-screen').style.display = 'none';
       
       const isAdmin = (userData.email === ADMIN_EMAIL);
@@ -359,19 +451,50 @@
       await loadUserCircles();
     }
 
-    /* IMPOSTAZIONI E CAMBIO USERNAME (14 GIORNI) */
+    /* IMPOSTAZIONI, CAMBIO EMAIL E USERNAME */
     function openSettingsModal() {
       document.getElementById('settings-user-id').innerText = userData.id || "Non disponibile";
-      document.getElementById('settings-user-email').innerText = userData.email || "-";
+      document.getElementById('settings-new-email').value = userData.email || "";
       document.getElementById('settings-new-username').value = userData.username;
       openModal('settings-modal');
+    }
+
+    async function updateEmail() {
+      const newEmail = document.getElementById('settings-new-email').value.trim().toLowerCase();
+      if (!newEmail || newEmail === userData.email) return;
+
+      // Verifica se la nuova email è già usata da qualcun altro
+      const { data: checkEmail } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('email', newEmail);
+
+      if (checkEmail && checkEmail.length > 0) {
+        alert("Questa email è già registrata da un altro utente!");
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from('profiles')
+        .update({ email: newEmail })
+        .eq('id', userData.id);
+
+      if (error) {
+        alert("Errore nell'aggiornamento dell'email: " + error.message);
+        return;
+      }
+
+      userData.email = newEmail;
+      localStorage.setItem('daycap_userData', JSON.stringify(userData));
+      initUI();
+      closeModal('settings-modal');
+      alert("Email aggiornata con successo! ✉️");
     }
 
     async function updateUsername() {
       const newName = document.getElementById('settings-new-username').value.trim().replace('@', '');
       if (!newName || newName === userData.username) return;
 
-      // Controllo 14 giorni
       if (userData.last_username_change) {
         const lastChange = new Date(userData.last_username_change);
         const now = new Date();
@@ -383,7 +506,6 @@
         }
       }
 
-      // Verifica unicità
       const { data: checkUser } = await supabaseClient
         .from('profiles')
         .select('*')
@@ -411,6 +533,16 @@
       initUI();
       closeModal('settings-modal');
       alert("Username aggiornato con successo! 🎉");
+    }
+
+    /* DISCONNESSIONE ACCOUNT */
+    function logoutUser() {
+      if (confirm("Vuoi davvero disconnetterti dal tuo account?")) {
+        localStorage.removeItem('daycap_userData');
+        userData = null;
+        closeModal('settings-modal');
+        initUI();
+      }
     }
 
     /* ESPLORA UTENTI E SEGUI CON ID */
