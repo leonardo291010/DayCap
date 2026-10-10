@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>DayCap</title>
   <!-- Collegamento al file Manifest e Icone PWA -->
- <link rel="manifest" href="manifest.json">
- <meta name="theme-color" content="#090d16">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121214">
 
-<!-- Icona per iPhone / Android -->
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" type="image/png" href="icon-192.png">
-<meta name="apple-mobile-web-app-title" content="DayCap">
-<meta name="apple-mobile-web-app-capable" content="yes">
+  <!-- Icona per iPhone / Android -->
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="DayCap">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,12 +21,12 @@
   <div id="auth-screen">
     <div class="auth-header">
       <div class="auth-logo">DayCap</div>
-      <p style="color: var(--text-muted); font-size: 0.95rem;">Condividi le tue giornate con le tue cerchie.</p>
+      <p style="color: var(--text-secondary); font-size: 0.95rem;">Condividi le tue giornate con le tue cerchie.</p>
     </div>
     <div class="auth-card">
-      <label style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">EMAIL</label>
+      <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">EMAIL</label>
       <input type="email" id="auth-email" placeholder="nome@esempio.com">
-      <label style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">USERNAME</label>
+      <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">USERNAME</label>
       <input type="text" id="auth-username" placeholder="@tuousername">
       <button class="btn" style="margin-top: 10px;" onclick="handleRegister()">Entra in DayCap</button>
     </div>
@@ -35,7 +35,7 @@
   <!-- TAB PROFILO -->
   <div id="tab-profile" class="tab-content active">
     <div class="top-bar">
-      <span style="font-weight:bold; font-size:1.1rem; color:var(--btn-primary);">DayCap</span>
+      <span style="font-weight:bold; font-size:1.1rem; color:var(--brand-orange);">DayCap</span>
       <button class="inbox-btn" onclick="openModal('inbox-modal')">📩 Posta</button>
     </div>
 
@@ -65,7 +65,7 @@
 
     <!-- RICERCA UTENTI DA SEGUIRE -->
     <div style="margin-bottom: 20px;">
-      <label style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">CERCA PERSONE DA SEGUIRE</label>
+      <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">CERCA PERSONE DA SEGUIRE</label>
       <div style="display:flex; gap:8px;">
         <input type="text" id="search-user-input" placeholder="Cerca @username..." style="margin:0;">
         <button class="btn" style="width:auto; padding:0 16px;" onclick="searchAndFollowUser()">Cerca</button>
@@ -77,10 +77,10 @@
     <h4 style="margin-bottom: 10px; font-size:0.95rem;">Storie in Evidenza</h4>
     <div class="featured-container" id="featured-container">
       <div class="featured-item" style="cursor:default;">
-        <label class="featured-ring" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03); border: 2px dashed var(--border); cursor:pointer;">
+        <label class="featured-ring" style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border: 2px dashed var(--border-color); cursor:pointer;">
           ➕<input type="file" accept="image/*" onchange="addHighlightPhoto(event)">
         </label>
-        <span style="font-size: 0.7rem; color: var(--text-muted);">Aggiungi</span>
+        <span style="font-size: 0.7rem; color: var(--text-secondary);">Aggiungi</span>
       </div>
     </div>
   </div>
@@ -95,7 +95,7 @@
       </div>
 
       <div id="circles-container">
-        <p style="color: var(--text-muted); text-align: center; margin-top: 40px; font-size:0.9rem;">Non fai ancora parte di nessuna cerchia.</p>
+        <p style="color: var(--text-secondary); text-align: center; margin-top: 40px; font-size:0.9rem;">Non fai ancora parte di nessuna cerchia.</p>
       </div>
     </div>
 
@@ -109,18 +109,19 @@
       </div>
       
       <!-- PROGRAMMAZIONE SFIDA -->
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin-bottom: 18px;">
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 12px; margin-bottom: 18px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
             <h4 style="font-size:0.9rem;">Sfida Cerchia 🏆</h4>
-            <p id="challenge-status-text" style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Nessuna sfida programmata.</p>
+            <p id="challenge-status-text" style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">Nessuna sfida programmata.</p>
           </div>
           <button class="btn btn-secondary" style="width:auto; padding:6px 10px; font-size:0.75rem;" onclick="openScheduleModal()">📅 Programma</button>
         </div>
       </div>
 
-      <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-        <label class="btn">
+      <!-- PULSANTE SCATTO (GESTITO DINAMICAMENTE DALLA SFIDA) -->
+      <div style="display: flex; gap: 10px; margin-bottom: 25px;" id="shutter-container">
+        <label class="btn" id="shutter-btn-label" style="display: none;">
           📷 Scatta / Carica Foto
           <input type="file" accept="image/*" onchange="handleTimelineUpload(event)">
         </label>
@@ -131,11 +132,11 @@
     </div>
   </div>
 
-  <!-- MODALE PROGRAMMA SFIDA (ESCLUSIVAMENTE PER IL GIORNO DOPO O OLTRE) -->
+  <!-- MODALE PROGRAMMA SFIDA -->
   <div class="modal" id="schedule-challenge-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 5px;">Programma Sfida 🏆</h3>
-      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Le sfide possono essere programmate solo a partire da domani e inizieranno a mezzanotte (00:00).</p>
+      <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">Le sfide possono essere programmate solo a partire da domani e inizieranno a mezzanotte (00:00).</p>
       <input type="date" id="challenge-date-input">
       <button class="btn" onclick="scheduleChallenge()">Conferma Programmazione</button>
       <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('schedule-challenge-modal')">Annulla</button>
@@ -146,11 +147,11 @@
   <div class="modal" id="slot-photos-modal">
     <div class="modal-content">
       <h3 id="slot-modal-title" style="margin-bottom: 5px;">Fascia Oraria</h3>
-      <p id="slot-modal-subtitle" style="font-size: 0.8rem; color: var(--text-muted);"></p>
+      <p id="slot-modal-subtitle" style="font-size: 0.8rem; color: var(--text-secondary);"></p>
       <div class="gallery-grid" id="slot-photos-container"></div>
       
-      <div id="slot-emoji-action-section" style="display:none; margin-top:15px; border-top:1px solid var(--border); padding-top:12px;">
-        <p style="font-size:0.8rem; color:var(--btn-primary); margin-bottom:6px;">Non hai caricato foto? Inserisci un'emoji a tua scelta (es: 👨‍🏫 per scuola, 🏋️ per palestra):</p>
+      <div id="slot-emoji-action-section" style="display:none; margin-top:15px; border-top:1px solid var(--border-color); padding-top:12px;">
+        <p style="font-size:0.8rem; color:var(--brand-orange); margin-bottom:6px;">Non hai caricato foto? Inserisci un'emoji a tua scelta (es: 👨‍🏫 per scuola, 🏋️ per palestra):</p>
         <div style="display:flex; gap:8px;">
           <input type="text" id="slot-custom-emoji-input" placeholder="Inserisci emoji..." style="margin:0;">
           <button class="btn btn-success" style="width:auto; padding:0 14px;" onclick="saveSlotCustomEmoji()">Salva</button>
@@ -168,6 +169,17 @@
       <img id="highlight-viewer-img" style="width:100%; max-height:300px; object-fit:cover; border-radius:14px; margin-bottom:15px;">
       <button class="btn btn-danger" onclick="deleteCurrentHighlight()">🗑️ Elimina Storia</button>
       <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('view-highlight-modal')">Chiudi</button>
+    </div>
+  </div>
+
+  <!-- MODALE LISTA UTENTI (FOLLOWER / SEGUITI) -->
+  <div class="modal" id="users-list-modal">
+    <div class="modal-content">
+      <h3 id="users-modal-title" style="margin-bottom: 15px;">Lista Utenti</h3>
+      <div id="users-list-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto;">
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun utente al momento.</p>
+      </div>
+      <button class="btn btn-secondary" style="margin-top: 20px;" onclick="closeModal('users-list-modal')">Chiudi</button>
     </div>
   </div>
 
@@ -196,7 +208,7 @@
     <div class="modal-content">
       <h3 style="margin-bottom: 15px;">La Tua Posta 📩</h3>
       <div id="notifications-list">
-        <p style="color: var(--text-muted); text-align: center; padding: 20px 0; font-size: 0.85rem;">Nessuna nuova notifica.</p>
+        <p style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-size: 0.85rem;">Nessuna nuova notifica.</p>
       </div>
       <button class="btn btn-secondary" style="margin-top:15px;" onclick="closeModal('inbox-modal')">Chiudi</button>
     </div>
@@ -229,7 +241,6 @@
     let activeSlotHour = null;
     let activeHighlightIndex = null;
     
-    // Foto e emoji personalizzate per gli slot orari
     let timelineData = JSON.parse(localStorage.getItem('daycap_timeline_data')) || {
       photos: Array.from({ length: 24 }, () => []),
       emojis: Array.from({ length: 24 }, () => null)
@@ -258,11 +269,36 @@
         document.getElementById('avatar-display').innerText = userData.username.charAt(0).toUpperCase();
       }
 
-      document.getElementById('follower-count').innerText = userData.followers.length;
-      document.getElementById('following-count').innerText = userData.following.length;
+      document.getElementById('follower-count').innerText = userData.followers ? userData.followers.length : 0;
+      document.getElementById('following-count').innerText = userData.following ? userData.following.length : 0;
 
       renderHighlights();
       renderCirclesList();
+    }
+
+    /* APRI MODALE FOLLOWER / SEGUITI */
+    function openUsersModal(type) {
+      const titleEl = document.getElementById('users-modal-title');
+      const container = document.getElementById('users-list-container');
+      
+      if (type === 'followers') {
+        titleEl.innerText = 'I tuoi Follower';
+        const list = userData.followers || [];
+        if (list.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun follower al momento.</p>';
+        } else {
+          container.innerHTML = list.map(f => `<div style="padding: 10px; background: var(--bg-main); border-radius: 8px;">@${f}</div>`).join('');
+        }
+      } else {
+        titleEl.innerText = 'Persone che segui';
+        const list = userData.following || [];
+        if (list.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Non stai seguendo nessuno.</p>';
+        } else {
+          container.innerHTML = list.map(f => `<div style="padding: 10px; background: var(--bg-main); border-radius: 8px;">@${f}</div>`).join('');
+        }
+      }
+      openModal('users-list-modal');
     }
 
     /* RICERCA PERSONE DA SEGUIRE */
@@ -272,6 +308,8 @@
 
       const cleanUser = query.replace('@', '');
       if (cleanUser === userData.username) { alert("Non puoi seguire te stesso!"); return; }
+
+      if (!userData.following) userData.following = [];
 
       if (!userData.following.includes(cleanUser)) {
         userData.following.push(cleanUser);
@@ -304,7 +342,7 @@
       reader.readAsDataURL(file);
     }
 
-    /* RENDER TIMELINE CON EMOJI A SCELTA PER ORE PASSATE */
+    /* RENDER TIMELINE */
     function renderTimeline() {
       const container = document.getElementById('timeline');
       container.innerHTML = '';
@@ -342,8 +380,8 @@
         slotEl.onclick = () => openSlotPhotosModal(hour);
         slotEl.innerHTML = `
           <div>
-            <div style="font-weight:600; font-size:0.85rem; color:var(--btn-primary);">${hourLabel}</div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${statusText}</div>
+            <div style="font-weight:600; font-size:0.85rem; color:var(--brand-orange);">${hourLabel}</div>
+            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">${statusText}</div>
           </div>
           <div style="font-size:1.3rem;">${emoji}</div>
         `;
@@ -390,7 +428,7 @@
       renderTimeline();
     }
 
-    /* PROGRAMMAZIONE SFIDA (SOLO DAL GIORNO SUCCESSIVO IN POI) */
+    /* PROGRAMMAZIONE SFIDA */
     function openScheduleModal() {
       const today = new Date();
       today.setDate(today.getDate() + 1); // Domani
@@ -425,9 +463,11 @@
       if (activeCircleIndex === null) return;
       const circle = userCircles[activeCircleIndex];
       const statusText = document.getElementById('challenge-status-text');
+      const shutterBtnLabel = document.getElementById('shutter-btn-label');
 
       if (!circle.challenge) {
         statusText.innerText = "Nessuna sfida programmata.";
+        shutterBtnLabel.style.display = 'none'; // Bloccato / Nascosto finché non c'è una sfida
         return;
       }
 
@@ -436,14 +476,17 @@
 
       if (chal.scheduledDate > todayStr) {
         statusText.innerText = `Programmata per il ${chal.scheduledDate} (Start ore 00:00)`;
+        shutterBtnLabel.style.display = 'none'; // Non è ancora il giorno giusto
       } else if (chal.scheduledDate === todayStr) {
         statusText.innerText = `🔥 SFIDA IN CORSO OGGI!`;
+        shutterBtnLabel.style.display = 'inline-block'; // Sbloccato oggi dalle 00:00
       } else {
         statusText.innerText = `Sfida terminata.`;
+        shutterBtnLabel.style.display = 'none'; // Scaduta
       }
     }
 
-    /* STORIE IN EVIDENZA & ELIMINAZIONE */
+    /* STORIE IN EVIDENZA */
     function addHighlightPhoto(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -484,7 +527,7 @@
       renderHighlights();
     }
 
-    /* CERCHIE: CREA, UNISCITI, INVITA */
+    /* CERCHIE */
     function createCircle() {
       const name = document.getElementById('circle-name-input').value.trim();
       if (!name) return;
@@ -521,14 +564,14 @@
     function renderCirclesList() {
       const container = document.getElementById('circles-container');
       if (userCircles.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 40px; font-size:0.9rem;">Non fai ancora parte di nessuna cerchia.</p>';
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; margin-top: 40px; font-size:0.9rem;">Non fai ancora parte di nessuna cerchia.</p>';
         return;
       }
 
       container.innerHTML = userCircles.map((circle, idx) => `
         <div class="circle-card">
           <h3 style="font-size:1.1rem; margin-bottom:4px;">${circle.name}</h3>
-          <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:12px;">Codice: ${circle.id}</p>
+          <p style="color:var(--text-secondary); font-size:0.8rem; margin-bottom:12px;">Codice: ${circle.id}</p>
           <button class="btn" onclick="openCircle(${idx})">Entra nella Cerchia</button>
         </div>
       `).join('');
@@ -549,7 +592,7 @@
       document.getElementById('circle-detail-view').style.display = 'none';
     }
 
-    /* ALTRE UTILITY */
+    /* UTILITY */
     function triggerAvatarUpload() { document.getElementById('avatar-file-input').click(); }
     function changeProfilePicture(e) {
       const file = e.target.files[0];
