@@ -42,23 +42,29 @@
       <p style="color: var(--text-secondary); font-size: 0.95rem;">Condividi le tue giornate con le tue cerchie.</p>
     </div>
     
-    <!-- SELETTORE MODALITÀ (ACCEDI / REGISTRATI) -->
-    <div style="display:flex; gap:10px; margin-bottom:15px; width:100%; max-width:320px;">
-      <button id="auth-tab-login" class="btn" onclick="switchAuthMode('login')">Accedi</button>
-      <button id="auth-tab-register" class="btn btn-secondary" onclick="switchAuthMode('register')">Registrati</button>
-    </div>
-
-    <!-- FORM DI LOGIN / REGISTRAZIONE -->
-    <div class="auth-card">
-      <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">EMAIL</label>
-      <input type="email" id="auth-email" placeholder="nome@esempio.com">
+    <!-- STEP 1: RICHIESTA EMAIL O USERNAME -->
+    <div id="auth-step-1" class="auth-card">
+      <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">EMAIL O USERNAME</label>
+      <input type="text" id="auth-identifier" placeholder="nome@esempio.com o @username">
       
-      <div id="username-input-wrapper">
-        <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">USERNAME</label>
-        <input type="text" id="auth-username" placeholder="@tuousername">
+      <div id="username-register-wrapper" style="display: none; margin-top: 10px;">
+        <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">SCEGLI UN USERNAME</label>
+        <input type="text" id="auth-new-username" placeholder="@tuousername">
       </div>
 
-      <button id="auth-submit-btn" class="btn" style="margin-top: 10px;" onclick="handleAuthSubmit()">Accedi a DayCap</button>
+      <button id="auth-main-btn" class="btn" style="margin-top: 15px;" onclick="handleAuthFlow()">Continua</button>
+      <p id="auth-switch-mode-text" style="font-size:0.75rem; color:var(--text-secondary); text-align:center; margin-top:12px; cursor:pointer;" onclick="toggleAuthRegisterMode()">Primo accesso? Clicca qui per registrarti</p>
+    </div>
+
+    <!-- STEP 2: INSERIMENTO CODICE OTP A 6 CIFRE -->
+    <div id="auth-step-2" class="auth-card" style="display: none;">
+      <h3 style="font-size:1.1rem; margin-bottom:6px;">Verifica Email ✉️</h3>
+      <p id="otp-instruction-text" style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:15px;">Abbiamo inviato un codice a 6 cifre alla tua email. Inseriscilo qui sotto:</p>
+      
+      <input type="text" id="auth-otp-code" placeholder="123456" maxlength="6" style="text-align:center; font-size:1.4rem; letter-spacing:6px; font-weight:bold;">
+      
+      <button class="btn" style="margin-top: 15px;" onclick="verifyOtpCode()">Conferma Codice</button>
+      <button class="btn btn-secondary" style="margin-top: 8px; font-size:0.8rem;" onclick="backToAuthStep1()">Indietro</button>
     </div>
   </div>
 
@@ -187,7 +193,7 @@
         <div>
           <label style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">EMAIL ATTUALE</label>
           <input type="email" id="settings-new-email" style="margin-top:4px;">
-          <button class="btn btn-secondary" style="margin-top:4px; padding:6px; font-size:0.8rem;" onclick="updateEmail()">Aggiorna Email</button>
+          <button class="btn btn-secondary" style="margin-top:4px; padding:6px; font-size:0.8rem;" onclick="requestEmailChange()">Aggiorna Email (Con Verifica OTP)</button>
         </div>
         
         <!-- CAMBIO USERNAME -->
@@ -311,7 +317,9 @@
     const ADMIN_EMAIL = "leobri2910@gmail.com";
 
     let userData = JSON.parse(localStorage.getItem('daycap_userData')) || null;
-    let authMode = 'login'; // 'login' oppure 'register'
+    let isRegisterMode = false;
+    let pendingEmail = "";
+    let pendingUsername = "";
     let userCircles = [];
     let activeCircleIndex = null;
     let activeSlotHour = null;
@@ -326,109 +334,157 @@
       return result;
     }
 
-    /* GESTIONE SWITCH MODALITÀ AUTH (ACCEDI / REGISTRATI) */
-    function switchAuthMode(mode) {
-      authMode = mode;
-      const loginTab = document.getElementById('auth-tab-login');
-      const registerTab = document.getElementById('auth-tab-register');
-      const usernameWrapper = document.getElementById('username-input-wrapper');
-      const submitBtn = document.getElementById('auth-submit-btn');
+    /* GESTIONE FLUSSO AUTH CON OTP */
+    function toggleAuthRegisterMode() {
+      isRegisterMode = !isRegisterMode;
+      const usernameWrapper = document.getElementById('username-register-wrapper');
+      const mainBtn = document.getElementById('auth-main-btn');
+      const switchText = document.getElementById('auth-switch-mode-text');
+      const identifierInput = document.getElementById('auth-identifier');
 
-      if (mode === 'login') {
-        loginTab.className = 'btn';
-        registerTab.className = 'btn btn-secondary';
-        usernameWrapper.style.display = 'none';
-        submitBtn.innerText = 'Accedi a DayCap';
-      } else {
-        loginTab.className = 'btn btn-secondary';
-        registerTab.className = 'btn';
+      if (isRegisterMode) {
         usernameWrapper.style.display = 'block';
-        submitBtn.innerText = 'Registrati in DayCap';
+        mainBtn.innerText = 'Invia Codice di Registrazione';
+        switchText.innerText = 'Hai già un account? Clicca qui per accedere';
+        identifierInput.placeholder = 'tua@email.com';
+      } else {
+        usernameWrapper.style.display = 'none';
+        mainBtn.innerText = 'Invia Codice di Accesso';
+        switchText.innerText = 'Primo accesso? Clicca qui per registrarti';
+        identifierInput.placeholder = 'tua@email.com o @username';
       }
     }
 
-    /* GESTIONE SUBMIT AUTH (LOGIN O REGISTRAZIONE CON VERIFICA) */
-    async function handleAuthSubmit() {
-      const email = document.getElementById('auth-email').value.trim().toLowerCase();
-      if (!email) { alert("Inserisci una mail valida."); return; }
+    async function handleAuthFlow() {
+      const inputVal = document.getElementById('auth-identifier').value.trim();
+      if (!inputVal) { alert("Inserisci un'email o uno username valido."); return; }
 
-      if (authMode === 'login') {
-        // VERIFICA ESISTENZA EMAIL
-        const { data: userProfile, error } = await supabaseClient
+      let targetEmail = "";
+
+      if (inputVal.includes('@') && !inputVal.startsWith('@')) {
+        targetEmail = inputVal.toLowerCase();
+      } else {
+        // Se ha inserito uno username, cerchiamo l'email associata nel DB profiles
+        const searchUsername = inputVal.replace('@', '');
+        const { data: prof, error } = await supabaseClient
           .from('profiles')
-          .select('*')
-          .eq('email', email)
+          .select('email')
+          .eq('username', searchUsername)
           .single();
 
-        if (error || !userProfile) {
-          alert("Nessun account trovato con questa email. Registrati prima!");
+        if (error || !prof) {
+          alert("Username non trovato su DayCap. Controlla o registrati!");
           return;
         }
+        targetEmail = prof.email;
+      }
 
-        userData = {
-          id: userProfile.id,
-          email: userProfile.email,
-          username: userProfile.username,
-          profilePic: userProfile.profile_pic || null,
-          followers: [],
-          following: [],
-          highlights: [],
-          last_username_change: userProfile.last_username_change
-        };
-        localStorage.setItem('daycap_userData', JSON.stringify(userData));
-        initUI();
-        alert(`Bentornato, @${userData.username}! 👋`);
+      pendingEmail = targetEmail;
 
+      if (isRegisterMode) {
+        const usernameInput = document.getElementById('auth-new-username').value.trim().replace('@', '');
+        if (!usernameInput) { alert("Scegli uno username per registrarti."); return; }
+
+        // Verifica se l'email o l'username esistono già
+        const { data: checkEmail } = await supabaseClient.from('profiles').select('*').eq('email', pendingEmail);
+        if (checkEmail && checkEmail.length > 0) { alert("Questa email è già registrata!"); return; }
+
+        const { data: checkUser } = await supabaseClient.from('profiles').select('*').eq('username', usernameInput);
+        if (checkUser && checkUser.length > 0) { alert("Questo username è già occupato!"); return; }
+
+        pendingUsername = usernameInput;
       } else {
-        // REGISTRAZIONE NUOVO UTENTE
-        const username = document.getElementById('auth-username').value.trim().replace('@', '');
-        if (!username) { alert("Inserisci uno username valido."); return; }
-
-        // Verifica se l'email esiste già
-        const { data: existingEmail } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .eq('email', email);
-
-        if (existingEmail && existingEmail.length > 0) {
-          alert("Questa email è già associata a un account! Fai il Login.");
+        // Controllo se l'email esiste nel database per il login
+        const { data: checkUser } = await supabaseClient.from('profiles').select('*').eq('email', pendingEmail);
+        if (!checkUser || checkUser.length === 0) {
+          alert("Nessun account associato a questa email. Registrati prima!");
           return;
         }
+        pendingUsername = checkUser[0].username;
+      }
 
-        // Verifica se l'username esiste già
-        const { data: existingUser } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .eq('username', username);
+      // INVIO CODICE OTP TRAMITE SUPABASE AUTH
+      const { error } = await supabaseClient.auth.signInWithOtp({
+        email: pendingEmail,
+        options: { shouldCreateUser: true }
+      });
 
-        if (existingUser && existingUser.length > 0) {
-          alert("Questo username è già occupato! Scegline un altro.");
-          return;
-        }
+      if (error) {
+        alert("Errore nell'invio del codice OTP: " + error.message);
+        return;
+      }
 
+      // Passiamo alla schermata di inserimento codice
+      document.getElementById('auth-step-1').style.display = 'none';
+      document.getElementById('auth-step-2').style.display = 'block';
+      document.getElementById('otp-instruction-text').innerText = `Inserisci il codice a 6 cifre inviato a ${pendingEmail}:`;
+    }
+
+    async function verifyOtpCode() {
+      const otpCode = document.getElementById('auth-otp-code').value.trim();
+      if (otpCode.length !== 6) { alert("Il codice OTP deve essere di 6 cifre."); return; }
+
+      // Verifica del token OTP con Supabase
+      const { data, error } = await supabaseClient.auth.verifyOtp({
+        email: pendingEmail,
+        token: otpCode,
+        type: 'email'
+      });
+
+      if (error) {
+        alert("Codice non valido o scaduto: " + error.message);
+        return;
+      }
+
+      // Se è una nuova registrazione, salviamo il profilo nella tabella profiles
+      if (isRegisterMode) {
         const userId = generateUniqueId();
         const now = new Date().toISOString();
 
-        const { error: regError } = await supabaseClient
+        const { error: insError } = await supabaseClient
           .from('profiles')
-          .insert([{ id: userId, username: username, email: email, profile_pic: null, last_username_change: now }]);
+          .insert([{ id: userId, username: pendingUsername, email: pendingEmail, profile_pic: null, last_username_change: now }]);
 
-        if (regError) {
-          alert("Errore durante la registrazione: " + regError.message);
+        if (insError) {
+          alert("Errore nel salvataggio del profilo: " + insError.message);
           return;
         }
 
-        userData = { id: userId, email, username, profilePic: null, followers: [], following: [], highlights: [], last_username_change: now };
-        localStorage.setItem('daycap_userData', JSON.stringify(userData));
-        initUI();
-        alert(`Benvenuto in DayCap, @${username}! 🎉`);
+        userData = { id: userId, email: pendingEmail, username: pendingUsername, profilePic: null, followers: [], following: [], highlights: [], last_username_change: now };
+      } else {
+        // Recuperiamo i dati completi dal profilo esistente
+        const { data: userProf } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('email', pendingEmail)
+          .single();
+
+        userData = {
+          id: userProf.id,
+          email: userProf.email,
+          username: userProf.username,
+          profilePic: userProf.profile_pic || null,
+          followers: [],
+          following: [],
+          highlights: [],
+          last_username_change: userProf.last_username_change
+        };
       }
+
+      localStorage.setItem('daycap_userData', JSON.stringify(userData));
+      document.getElementById('auth-otp-code').value = '';
+      initUI();
+      alert(`Accesso effettuato con successo, @${userData.username}! 🎉`);
+    }
+
+    function backToAuthStep1() {
+      document.getElementById('auth-step-2').style.display = 'none';
+      document.getElementById('auth-step-1').style.display = 'block';
     }
 
     async function initUI() {
       if (!userData) { 
         document.getElementById('auth-screen').style.display = 'flex'; 
-        switchAuthMode('login');
         return; 
       }
       document.getElementById('auth-screen').style.display = 'none';
@@ -459,36 +515,23 @@
       openModal('settings-modal');
     }
 
-    async function updateEmail() {
+    async function requestEmailChange() {
       const newEmail = document.getElementById('settings-new-email').value.trim().toLowerCase();
       if (!newEmail || newEmail === userData.email) return;
 
-      // Verifica se la nuova email è già usata da qualcun altro
-      const { data: checkEmail } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('email', newEmail);
+      const { data: checkEmail } = await supabaseClient.from('profiles').select('*').eq('email', newEmail);
+      if (checkEmail && checkEmail.length > 0) { alert("Questa email è già in uso da un altro utente!"); return; }
 
-      if (checkEmail && checkEmail.length > 0) {
-        alert("Questa email è già registrata da un altro utente!");
-        return;
-      }
+      const { error } = await supabaseClient.auth.updateUser({ email: newEmail });
+      if (error) { alert("Errore richiesta cambio email: " + error.message); return; }
 
-      const { error } = await supabaseClient
-        .from('profiles')
-        .update({ email: newEmail })
-        .eq('id', userData.id);
-
-      if (error) {
-        alert("Errore nell'aggiornamento dell'email: " + error.message);
-        return;
-      }
+      // Aggiorniamo anche nella tabella profiles
+      await supabaseClient.from('profiles').update({ email: newEmail }).eq('id', userData.id);
 
       userData.email = newEmail;
       localStorage.setItem('daycap_userData', JSON.stringify(userData));
-      initUI();
+      alert("✉️ Email aggiornata con successo!");
       closeModal('settings-modal');
-      alert("Email aggiornata con successo! ✉️");
     }
 
     async function updateUsername() {
@@ -506,26 +549,13 @@
         }
       }
 
-      const { data: checkUser } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('username', newName);
-
-      if (checkUser && checkUser.length > 0) {
-        alert("Questo username è già preso da un altro utente!");
-        return;
-      }
+      const { data: checkUser } = await supabaseClient.from('profiles').select('*').eq('username', newName);
+      if (checkUser && checkUser.length > 0) { alert("Questo username è già preso!"); return; }
 
       const now = new Date().toISOString();
-      const { error } = await supabaseClient
-        .from('profiles')
-        .update({ username: newName, last_username_change: now })
-        .eq('id', userData.id);
+      const { error } = await supabaseClient.from('profiles').update({ username: newName, last_username_change: now }).eq('id', userData.id);
 
-      if (error) {
-        alert("Errore nell'aggiornamento: " + error.message);
-        return;
-      }
+      if (error) { alert("Errore: " + error.message); return; }
 
       userData.username = newName;
       userData.last_username_change = now;
@@ -536,8 +566,9 @@
     }
 
     /* DISCONNESSIONE ACCOUNT */
-    function logoutUser() {
+    async function logoutUser() {
       if (confirm("Vuoi davvero disconnetterti dal tuo account?")) {
+        await supabaseClient.auth.signOut();
         localStorage.removeItem('daycap_userData');
         userData = null;
         closeModal('settings-modal');
@@ -552,9 +583,7 @@
       
       if (type === 'explore') {
         titleEl.innerText = 'Esplora Utenti DayCap 🌍';
-        const { data: profiles, error } = await supabaseClient
-          .from('profiles')
-          .select('id, username, email');
+        const { data: profiles, error } = await supabaseClient.from('profiles').select('id, username, email');
 
         if (error || !profiles || profiles.length === 0) {
           container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun utente trovato.</p>';
@@ -584,14 +613,8 @@
       if (!userData.following) userData.following = [];
       if (userData.following.includes(targetUsername)) { alert(`Segui già @${targetUsername}!`); return; }
 
-      const { error } = await supabaseClient
-        .from('follows')
-        .insert([{ follower_id: userData.id, following_id: targetId }]);
-
-      if (error) {
-        alert("Errore nel seguire l'utente: " + error.message);
-        return;
-      }
+      const { error } = await supabaseClient.from('follows').insert([{ follower_id: userData.id, following_id: targetId }]);
+      if (error) { alert("Errore: " + error.message); return; }
 
       userData.following.push(targetUsername);
       localStorage.setItem('daycap_userData', JSON.stringify(userData));
@@ -604,15 +627,8 @@
       const query = document.getElementById('search-user-input').value.trim().replace('@', '');
       if (!query) return;
 
-      const { data: foundUser, error } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('username', query);
-
-      if (error || !foundUser || foundUser.length === 0) {
-        alert(`L'utente @${query} non esiste su DayCap!`);
-        return;
-      }
+      const { data: foundUser, error } = await supabaseClient.from('profiles').select('*').eq('username', query);
+      if (error || !foundUser || foundUser.length === 0) { alert(`L'utente @${query} non esiste!`); return; }
 
       await followUser(foundUser[0].id, foundUser[0].username);
       document.getElementById('search-user-input').value = '';
@@ -626,10 +642,7 @@
 
       const circle = userCircles[activeCircleIndex];
       if (!circle.timelineData) {
-        circle.timelineData = {
-          photos: Array.from({ length: 24 }, () => []),
-          emojis: Array.from({ length: 24 }, () => null)
-        };
+        circle.timelineData = { photos: Array.from({ length: 24 }, () => []), emojis: Array.from({ length: 24 }, () => null) };
       }
 
       const currentHour = new Date().getHours();
@@ -649,12 +662,8 @@
     function renderTimeline() {
       if (activeCircleIndex === null) return;
       const circle = userCircles[activeCircleIndex];
-      
       if (!circle.timelineData) {
-        circle.timelineData = {
-          photos: Array.from({ length: 24 }, () => []),
-          emojis: Array.from({ length: 24 }, () => null)
-        };
+        circle.timelineData = { photos: Array.from({ length: 24 }, () => []), emojis: Array.from({ length: 24 }, () => null) };
       }
 
       const container = document.getElementById('timeline');
@@ -671,22 +680,11 @@
         let statusText = "";
         let emoji = "";
 
-        if (photos.length > 0) {
-          statusText = `${photos.length} foto caricate`;
-          emoji = "📸 ✅";
-        } else if (customEmoji) {
-          statusText = `Attività registrata`;
-          emoji = customEmoji;
-        } else if (isPassed) {
-          statusText = "Nessuna foto (Clicca per aggiungere un'emoji)";
-          emoji = "❓";
-        } else if (isCurrent) {
-          statusText = "In corso... aggiungi una foto!";
-          emoji = "⏳";
-        } else {
-          statusText = "In attesa...";
-          emoji = "🔒";
-        }
+        if (photos.length > 0) { statusText = `${photos.length} foto caricate`; emoji = "📸 ✅"; }
+        else if (customEmoji) { statusText = `Attività registrata`; emoji = customEmoji; }
+        else if (isPassed) { statusText = "Nessuna foto (Clicca per aggiungere un'emoji)"; emoji = "❓"; }
+        else if (isCurrent) { statusText = "In corso... aggiungi una foto!"; emoji = "⏳"; }
+        else { statusText = "In attesa..."; emoji = "🔒"; }
 
         const slotEl = document.createElement('div');
         slotEl.className = `hour-slot`;
@@ -724,7 +722,6 @@
         emojiSection.style.display = 'block';
         document.getElementById('slot-custom-emoji-input').value = customEmoji || '';
       }
-
       openModal('slot-photos-modal');
     }
 
@@ -739,34 +736,29 @@
       renderTimeline();
     }
 
-    /* PROGRAMMAZIONE E VISIBILITÀ SFIDA */
+    /* PROGRAMMAZIONE SFIDA */
     function openScheduleModal() {
       const today = new Date();
       today.setDate(today.getDate() + 1);
       const minDate = today.toISOString().split('T')[0];
-      
       const dateInput = document.getElementById('challenge-date-input');
       dateInput.min = minDate;
       dateInput.value = minDate;
-
       openModal('schedule-challenge-modal');
     }
 
     function scheduleChallenge() {
       if (activeCircleIndex === null) return;
       const dateVal = document.getElementById('challenge-date-input').value;
-      if (!dateVal) { alert("Seleziona una data valida."); return; }
+      if (!dateVal) return;
 
       const todayStr = new Date().toISOString().split('T')[0];
-      if (dateVal <= todayStr) {
-        alert("La sfida può essere programmata solo a partire da domani!");
-        return;
-      }
+      if (dateVal <= todayStr) { alert("La sfida può essere programmata solo a partire da domani!"); return; }
 
       userCircles[activeCircleIndex].challenge = { scheduledDate: dateVal };
       closeModal('schedule-challenge-modal');
       updateChallengeUI();
-      alert(`🎉 Sfida programmata per il ${dateVal}! Inizierà automaticamente alle 00:00.`);
+      alert(`🎉 Sfida programmata per il ${dateVal}!`);
     }
 
     function updateChallengeUI() {
@@ -789,7 +781,7 @@
       const chal = circle.challenge;
 
       if (chal.scheduledDate > todayStr) {
-        statusText.innerText = `Programmata per il ${chal.scheduledDate} (Start ore 00:00)`;
+        statusText.innerText = `Programmata per il ${chal.scheduledDate}`;
         shutterWrapper.style.display = 'none';
         timelineSection.style.display = 'none';
         placeholder.style.display = 'block';
@@ -853,65 +845,37 @@
       if (!name) return;
 
       const circleId = "DAYCAP-" + Math.floor(1000 + Math.random() * 9000);
+      const { error: circleError } = await supabaseClient.from('circles').insert([{ id: circleId, name: name, owner: userData.username }]);
+      if (circleError) { alert("Errore: " + circleError.message); return; }
 
-      const { error: circleError } = await supabaseClient
-        .from('circles')
-        .insert([{ id: circleId, name: name, owner: userData.username }]);
-
-      if (circleError) {
-        alert("Errore nella creazione della cerchia: " + circleError.message);
-        return;
-      }
-
-      await supabaseClient
-        .from('circle_members')
-        .insert([{ circle_id: circleId, username: userData.username }]);
-
+      await supabaseClient.from('circle_members').insert([{ circle_id: circleId, username: userData.username }]);
       closeModal('create-circle-modal');
       await loadUserCircles();
-      alert(`Cerchia "${name}" creata con successo! Codice: ${circleId}`);
+      alert(`Cerchia "${name}" creata! Codice: ${circleId}`);
     }
 
     async function joinCircleByCode() {
       const code = document.getElementById('join-circle-code-input').value.trim().toUpperCase();
       if (!code) return;
 
-      const { data: foundCircles, error: searchError } = await supabaseClient
-        .from('circles')
-        .select('*')
-        .eq('id', code);
-
-      if (searchError || !foundCircles || foundCircles.length === 0) {
-        alert("Cerchia non trovata con questo codice!");
-        return;
-      }
+      const { data: foundCircles, error: searchError } = await supabaseClient.from('circles').select('*').eq('id', code);
+      if (searchError || !foundCircles || foundCircles.length === 0) { alert("Cerchia non trovata!"); return; }
 
       const targetCircle = foundCircles[0];
-
-      const { data: existingMember } = await supabaseClient
-        .from('circle_members')
-        .select('*')
-        .eq('circle_id', code)
-        .eq('username', userData.username);
+      const { data: existingMember } = await supabaseClient.from('circle_members').select('*').eq('circle_id', code).eq('username', userData.username);
 
       if (!existingMember || existingMember.length === 0) {
-        await supabaseClient
-          .from('circle_members')
-          .insert([{ circle_id: code, username: userData.username }]);
+        await supabaseClient.from('circle_members').insert([{ circle_id: code, username: userData.username }]);
       }
 
       closeModal('join-circle-modal');
       await loadUserCircles();
-      alert(`Ti sei unito con successo alla cerchia ${targetCircle.name}! 🚀`);
+      alert(`Ti sei unito alla cerchia ${targetCircle.name}! 🚀`);
     }
 
     async function loadUserCircles() {
       if (!userData) return;
-
-      const { data: memberships, error } = await supabaseClient
-        .from('circle_members')
-        .select('circle_id')
-        .eq('username', userData.username);
+      const { data: memberships, error } = await supabaseClient.from('circle_members').select('circle_id').eq('username', userData.username);
 
       if (error || !memberships || memberships.length === 0) {
         userCircles = [];
@@ -920,22 +884,14 @@
       }
 
       const circleIds = memberships.map(m => m.circle_id);
-
-      const { data: circlesData } = await supabaseClient
-        .from('circles')
-        .select('*')
-        .in('id', circleIds);
+      const { data: circlesData } = await supabaseClient.from('circles').select('*').in('id', circleIds);
 
       userCircles = circlesData || [];
       userCircles.forEach(c => {
         if (!c.timelineData) {
-          c.timelineData = {
-            photos: Array.from({ length: 24 }, () => []),
-            emojis: Array.from({ length: 24 }, () => null)
-          };
+          c.timelineData = { photos: Array.from({ length: 24 }, () => []), emojis: Array.from({ length: 24 }, () => null) };
         }
       });
-
       renderCirclesList();
     }
 
@@ -952,11 +908,7 @@
       const circle = userCircles[activeCircleIndex];
       const container = document.getElementById('circle-members-list');
 
-      const { data: membersData } = await supabaseClient
-        .from('circle_members')
-        .select('username')
-        .eq('circle_id', circle.id);
-
+      const { data: membersData } = await supabaseClient.from('circle_members').select('username').eq('circle_id', circle.id);
       const members = membersData ? membersData.map(m => m.username) : [userData.username];
 
       container.innerHTML = members.map(m => `
@@ -965,7 +917,6 @@
           ${m === circle.owner ? '<span style="font-size:0.7rem; background:var(--brand-orange); color:white; padding:2px 6px; border-radius:8px;">👑 Proprietario</span>' : ''}
         </div>
       `).join('');
-
       openModal('circle-members-modal');
     }
 
@@ -993,13 +944,10 @@
       document.getElementById('circle-detail-view').style.display = 'block';
 
       const actionContainer = document.getElementById('circle-action-container');
-      
       let html = `<button class="btn btn-secondary" onclick="leaveCircle(${index})">🚪 Abbandona Cerchia</button>`;
-      
       if (circle.owner === userData.username) {
         html += `<button class="btn btn-danger" onclick="deleteCircle(${index})">🗑️ Elimina Cerchia (Proprietario)</button>`;
       }
-      
       actionContainer.innerHTML = html;
 
       updateChallengeUI();
@@ -1009,23 +957,17 @@
     async function leaveCircle(index) {
       if (confirm("Vuoi davvero abbandonare questa cerchia?")) {
         const circle = userCircles[index];
-        await supabaseClient
-          .from('circle_members')
-          .delete()
-          .eq('circle_id', circle.id)
-          .eq('username', userData.username);
-
+        await supabaseClient.from('circle_members').delete().eq('circle_id', circle.id).eq('username', userData.username);
         closeCircle();
         await loadUserCircles();
       }
     }
 
     async function deleteCircle(index) {
-      if (confirm("Sei il proprietario. Vuoi eliminare definitivamente questa cerchia per tutti?")) {
+      if (confirm("Vuoi eliminare definitivamente questa cerchia per tutti?")) {
         const circle = userCircles[index];
         await supabaseClient.from('circle_members').delete().eq('circle_id', circle.id);
         await supabaseClient.from('circles').delete().eq('id', circle.id);
-
         closeCircle();
         await loadUserCircles();
       }
@@ -1063,9 +1005,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(() => console.log('Service Worker registrato!'))
-          .catch(err => console.log('Errore SW:', err));
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('Errore SW:', err));
       });
     }
 
