@@ -240,11 +240,6 @@
     let activeCircleIndex = null;
     let activeSlotHour = null;
     let activeHighlightIndex = null;
-    
-    let timelineData = JSON.parse(localStorage.getItem('daycap_timeline_data')) || {
-      photos: Array.from({ length: 24 }, () => []),
-      emojis: Array.from({ length: 24 }, () => null)
-    };
 
     function handleRegister() {
       const email = document.getElementById('auth-email').value.trim();
@@ -276,7 +271,7 @@
       renderCirclesList();
     }
 
-    /* APRI MODALE FOLLOWER / SEGUITI */
+    /* APRI MODALE FOLLOWER / SEGUITI CON OPZIONE DI ELIMINAZIONE */
     function openUsersModal(type) {
       const titleEl = document.getElementById('users-modal-title');
       const container = document.getElementById('users-list-container');
@@ -287,7 +282,12 @@
         if (list.length === 0) {
           container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun follower al momento.</p>';
         } else {
-          container.innerHTML = list.map(f => `<div style="padding: 10px; background: var(--bg-main); border-radius: 8px;">@${f}</div>`).join('');
+          container.innerHTML = list.map((f, idx) => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-main); border-radius: 8px;">
+              <span>@${f}</span>
+              <button class="btn btn-danger" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="removeUserListItem('followers', ${idx})">Rimuovi</button>
+            </div>
+          `).join('');
         }
       } else {
         titleEl.innerText = 'Persone che segui';
@@ -295,13 +295,30 @@
         if (list.length === 0) {
           container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Non stai seguendo nessuno.</p>';
         } else {
-          container.innerHTML = list.map(f => `<div style="padding: 10px; background: var(--bg-main); border-radius: 8px;">@${f}</div>`).join('');
+          container.innerHTML = list.map((f, idx) => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-main); border-radius: 8px;">
+              <span>@${f}</span>
+              <button class="btn btn-danger" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="removeUserListItem('following', ${idx})">Smetti di seguire</button>
+            </div>
+          `).join('');
         }
       }
       openModal('users-list-modal');
     }
 
-    /* RICERCA PERSONE DA SEGUIRE */
+    function removeUserListItem(type, index) {
+      const targetList = type === 'followers' ? userData.followers : userData.following;
+      const userName = targetList[index];
+      
+      if (confirm(`Sei sicuro di voler rimuovere @${userName}?`)) {
+        targetList.splice(index, 1);
+        localStorage.setItem('daycap_userData', JSON.stringify(userData));
+        initUI();
+        openUsersModal(type);
+      }
+    }
+
+    /* RICERCA UTENTI */
     function searchAndFollowUser() {
       const query = document.getElementById('search-user-input').value.trim();
       if (!query) return;
@@ -314,7 +331,7 @@
       if (!userData.following.includes(cleanUser)) {
         userData.following.push(cleanUser);
         localStorage.setItem('daycap_userData', JSON.stringify(userData));
-        document.getElementById('following-count').innerText = userData.following.length;
+        initUI();
         alert(`Ora segui @${cleanUser}! 🎉`);
       } else {
         alert(`Segui già @${cleanUser}.`);
@@ -322,36 +339,55 @@
       document.getElementById('search-user-input').value = '';
     }
 
-    /* CARICAMENTO FOTO TIMELINE */
+    /* CARICAMENTO FOTO TIMELINE (SPECIFICA DELLA CERCHIA ATTIVA) */
     function handleTimelineUpload(event) {
+      if (activeCircleIndex === null) return;
       const file = event.target.files[0];
       if (!file) return;
+
+      const circle = userCircles[activeCircleIndex];
+      if (!circle.timelineData) {
+        circle.timelineData = {
+          photos: Array.from({ length: 24 }, () => []),
+          emojis: Array.from({ length: 24 }, () => null)
+        };
+      }
 
       const currentHour = new Date().getHours();
       const reader = new FileReader();
 
       reader.onload = function(e) {
-        timelineData.photos[currentHour].push({
+        circle.timelineData.photos[currentHour].push({
           img: e.target.result,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         });
-        localStorage.setItem('daycap_timeline_data', JSON.stringify(timelineData));
+        localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
         renderTimeline();
         alert(`📸 Foto caricata con successo per lo slot delle ${currentHour}:00!`);
       };
       reader.readAsDataURL(file);
     }
 
-    /* RENDER TIMELINE */
+    /* RENDER TIMELINE DELLA CERCHIA CORRENTE */
     function renderTimeline() {
+      if (activeCircleIndex === null) return;
+      const circle = userCircles[activeCircleIndex];
+      
+      if (!circle.timelineData) {
+        circle.timelineData = {
+          photos: Array.from({ length: 24 }, () => []),
+          emojis: Array.from({ length: 24 }, () => null)
+        };
+      }
+
       const container = document.getElementById('timeline');
       container.innerHTML = '';
       const currentHour = new Date().getHours();
 
       for (let hour = 0; hour < 24; hour++) {
         const hourLabel = `${String(hour).padStart(2, '0')}:00`;
-        const photos = timelineData.photos[hour];
-        const customEmoji = timelineData.emojis[hour];
+        const photos = circle.timelineData.photos[hour];
+        const customEmoji = circle.timelineData.emojis[hour];
         const isPassed = hour < currentHour;
         const isCurrent = hour === currentHour;
 
@@ -390,9 +426,11 @@
     }
 
     function openSlotPhotosModal(hour) {
+      if (activeCircleIndex === null) return;
       activeSlotHour = hour;
-      const photos = timelineData.photos[hour];
-      const customEmoji = timelineData.emojis[hour];
+      const circle = userCircles[activeCircleIndex];
+      const photos = circle.timelineData.photos[hour];
+      const customEmoji = circle.timelineData.emojis[hour];
       const container = document.getElementById('slot-photos-container');
       const emojiSection = document.getElementById('slot-emoji-action-section');
       const currentHour = new Date().getHours();
@@ -418,12 +456,13 @@
     }
 
     function saveSlotCustomEmoji() {
-      if (activeSlotHour === null) return;
+      if (activeCircleIndex === null || activeSlotHour === null) return;
       const val = document.getElementById('slot-custom-emoji-input').value.trim();
       if (!val) return;
 
-      timelineData.emojis[activeSlotHour] = val;
-      localStorage.setItem('daycap_timeline_data', JSON.stringify(timelineData));
+      const circle = userCircles[activeCircleIndex];
+      circle.timelineData.emojis[activeSlotHour] = val;
+      localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
       closeModal('slot-photos-modal');
       renderTimeline();
     }
@@ -431,7 +470,7 @@
     /* PROGRAMMAZIONE SFIDA */
     function openScheduleModal() {
       const today = new Date();
-      today.setDate(today.getDate() + 1); // Domani
+      today.setDate(today.getDate() + 1);
       const minDate = today.toISOString().split('T')[0];
       
       const dateInput = document.getElementById('challenge-date-input');
@@ -467,7 +506,7 @@
 
       if (!circle.challenge) {
         statusText.innerText = "Nessuna sfida programmata.";
-        shutterBtnLabel.style.display = 'none'; // Bloccato / Nascosto finché non c'è una sfida
+        shutterBtnLabel.style.display = 'none';
         return;
       }
 
@@ -476,13 +515,13 @@
 
       if (chal.scheduledDate > todayStr) {
         statusText.innerText = `Programmata per il ${chal.scheduledDate} (Start ore 00:00)`;
-        shutterBtnLabel.style.display = 'none'; // Non è ancora il giorno giusto
+        shutterBtnLabel.style.display = 'none';
       } else if (chal.scheduledDate === todayStr) {
         statusText.innerText = `🔥 SFIDA IN CORSO OGGI!`;
-        shutterBtnLabel.style.display = 'inline-block'; // Sbloccato oggi dalle 00:00
+        shutterBtnLabel.style.display = 'inline-block';
       } else {
         statusText.innerText = `Sfida terminata.`;
-        shutterBtnLabel.style.display = 'none'; // Scaduta
+        shutterBtnLabel.style.display = 'none';
       }
     }
 
@@ -535,7 +574,11 @@
       userCircles.push({
         id: "DAYCAP-" + Math.floor(1000 + Math.random() * 9000),
         name: name,
-        challenge: null
+        challenge: null,
+        timelineData: {
+          photos: Array.from({ length: 24 }, () => []),
+          emojis: Array.from({ length: 24 }, () => null)
+        }
       });
 
       localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
@@ -547,7 +590,15 @@
       const code = document.getElementById('join-circle-code-input').value.trim().toUpperCase();
       if (!code) return;
 
-      userCircles.push({ id: code, name: "Cerchia (" + code + ")", challenge: null });
+      userCircles.push({ 
+        id: code, 
+        name: "Cerchia (" + code + ")", 
+        challenge: null,
+        timelineData: {
+          photos: Array.from({ length: 24 }, () => []),
+          emojis: Array.from({ length: 24 }, () => null)
+        }
+      });
       localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
       closeModal('join-circle-modal');
       renderCirclesList();
