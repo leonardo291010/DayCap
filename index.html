@@ -20,10 +20,8 @@
     const SUPABASE_URL = 'https://spgrcjwxnabipaxwiagk.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_2XI738GQ9KVn_qSpav4rgA_8KNST8RR';
 
-    // Creazione del client Supabase globale
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Test rapido di connessione al database
     async function testSupabaseConnection() {
         const { data, error } = await supabaseClient.from('profiles').select('*').limit(1);
         if (error) {
@@ -32,7 +30,6 @@
             console.log('⚡ Connessione a Supabase riuscita! Dati:', data);
         }
     }
-
     testSupabaseConnection();
   </script>
 </head>
@@ -55,7 +52,8 @@
 
   <!-- TAB PROFILO -->
   <div id="tab-profile" class="tab-content active">
-    <div class="top-bar">
+    <div class="top-bar" style="display:flex; justify-content:space-between; align-items:center;">
+      <button class="inbox-btn" onclick="openSettingsModal()" style="font-size:1.2rem; background:transparent; border:none; cursor:pointer;">⚙️</button>
       <span style="font-weight:bold; font-size:1.1rem; color:var(--brand-orange);">DayCap</span>
       <button class="inbox-btn" onclick="openModal('inbox-modal')">📩 Posta</button>
     </div>
@@ -93,8 +91,7 @@
       </div>
     </div>
 
-    <button class="btn btn-secondary" onclick="openUsersModal('explore')" style="margin-bottom: 10px;">🌍 Esplora tutti gli utenti</button>
-    <button class="btn btn-secondary" onclick="openEditUsernameModal()" style="margin-bottom: 20px;">Modifica Profilo</button>
+    <button class="btn btn-secondary" onclick="openUsersModal('explore')" style="margin-bottom: 20px;">🌍 Esplora tutti gli utenti</button>
 
     <h4 style="margin-bottom: 10px; font-size:0.95rem;">Storie in Evidenza</h4>
     <div class="featured-container" id="featured-container">
@@ -144,7 +141,7 @@
         </div>
       </div>
 
-      <!-- TASTO SCATTO (MOSTRATO SOLO SE LA SFIDA È ATTIVA) -->
+      <!-- TASTO SCATTO -->
       <div id="shutter-wrapper" style="display: none; margin-bottom: 25px;">
         <label class="btn">
           📷 Scatta / Carica Foto
@@ -152,10 +149,8 @@
         </label>
       </div>
 
-      <!-- BOTTONI GESTIONE CERCHIA (ESCI / ELIMINA) -->
       <div id="circle-action-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom: 20px;"></div>
 
-      <!-- AREA TIMELINE O MESSAGGIO ATTESA -->
       <div id="timeline-section" style="display: none;">
         <h3 style="margin-bottom: 12px; font-size:1rem;">Timeline 24 Ore</h3>
         <div class="timeline" id="timeline"></div>
@@ -169,17 +164,36 @@
     </div>
   </div>
 
-  <!-- MODALI -->
+  <!-- MODALE IMPOSTAZIONI ACCOUNT -->
+  <div class="modal" id="settings-modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 15px;">Impostazioni Account ⚙️</h3>
+      <div style="text-align:left; font-size:0.85rem; display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
+        <div><strong>Tuo ID Univoco:</strong> <span id="settings-user-id" style="color:var(--brand-orange); font-family:monospace;">-</span></div>
+        <div><strong>Email:</strong> <span id="settings-user-email">-</span></div>
+        
+        <div style="margin-top:10px;">
+          <label style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">CAMBIA USERNAME (Consentito ogni 14 giorni)</label>
+          <input type="text" id="settings-new-username" placeholder="Nuovo username..." style="margin-top:4px;">
+          <button class="btn" style="margin-top:6px; padding:8px;" onclick="updateUsername()">Aggiorna Username</button>
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Chiudi</button>
+    </div>
+  </div>
+
+  <!-- MODALE PROGRAMMAZIONE SFIDA -->
   <div class="modal" id="schedule-challenge-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 5px;">Programma Sfida 🏆</h3>
-      <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">Le sfide possono essere programmate solo a partire da domani e inizieranno a mezzanotte (00:00).</p>
+      <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">Le sfide possono essere programmate a partire da domani (00:00).</p>
       <input type="date" id="challenge-date-input">
       <button class="btn" onclick="scheduleChallenge()">Conferma Programmazione</button>
       <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('schedule-challenge-modal')">Annulla</button>
     </div>
   </div>
 
+  <!-- MODALE MEMBRI -->
   <div class="modal" id="circle-members-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 15px;">Membri della Cerchia 👥</h3>
@@ -188,6 +202,7 @@
     </div>
   </div>
 
+  <!-- MODALE FOTO SLOT ORARIO -->
   <div class="modal" id="slot-photos-modal">
     <div class="modal-content">
       <h3 id="slot-modal-title" style="margin-bottom: 5px;">Fascia Oraria</h3>
@@ -206,6 +221,7 @@
     </div>
   </div>
 
+  <!-- MODALE VISUALIZZAZIONE EVIDENZA -->
   <div class="modal" id="view-highlight-modal">
     <div class="modal-content" style="text-align:center;">
       <h3 style="margin-bottom: 10px;">Storia in Evidenza</h3>
@@ -215,6 +231,7 @@
     </div>
   </div>
 
+  <!-- MODALE UTENTI / LISTE -->
   <div class="modal" id="users-list-modal">
     <div class="modal-content">
       <h3 id="users-modal-title" style="margin-bottom: 15px;">Lista Utenti</h3>
@@ -225,6 +242,7 @@
     </div>
   </div>
 
+  <!-- MODALE UNISCITI A CERCHIA -->
   <div class="modal" id="join-circle-modal">
     <div class="modal-content">
       <h3>Unisciti a una Cerchia</h3>
@@ -234,6 +252,7 @@
     </div>
   </div>
 
+  <!-- MODALE CREA CERCHIA -->
   <div class="modal" id="create-circle-modal">
     <div class="modal-content">
       <h3>Crea Nuova Cerchia</h3>
@@ -243,6 +262,7 @@
     </div>
   </div>
 
+  <!-- MODALE POSTA -->
   <div class="modal" id="inbox-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 15px;">La Tua Posta 📩</h3>
@@ -250,15 +270,6 @@
         <p style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-size: 0.85rem;">Nessuna nuova notifica.</p>
       </div>
       <button class="btn btn-secondary" style="margin-top:15px;" onclick="closeModal('inbox-modal')">Chiudi</button>
-    </div>
-  </div>
-
-  <div class="modal" id="username-modal">
-    <div class="modal-content">
-      <h3>Modifica Username</h3>
-      <input type="text" id="new-username-input" placeholder="Nuovo username...">
-      <button class="btn" onclick="saveUsername()">Salva Modifiche</button>
-      <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('username-modal')">Annulla</button>
     </div>
   </div>
 
@@ -273,31 +284,54 @@
   </nav>
 
   <script>
+    const ADMIN_EMAIL = "leobri2910@gmail.com"; // Email fissa del creatore supremo
+
     let userData = JSON.parse(localStorage.getItem('daycap_userData')) || null;
     let userCircles = [];
     let activeCircleIndex = null;
     let activeSlotHour = null;
     let activeHighlightIndex = null;
 
-    // --- REGISTRAZIONE CLOUD ---
+    // Generatore ID univoco casuale di 12 caratteri (es. 381A8SJ4889D)
+    function generateUniqueId() {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let result = "";
+      for (let i = 0; i < 12; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
+
+    // --- REGISTRAZIONE CLOUD CON ID E CONTROLLO UNICITÀ ---
     async function handleRegister() {
-      const email = document.getElementById('auth-email').value.trim();
+      const email = document.getElementById('auth-email').value.trim().toLowerCase();
       const username = document.getElementById('auth-username').value.trim().replace('@', '');
       if (!email || !username) { alert("Inserisci dati validi."); return; }
 
-      const { error } = await supabaseClient
+      // Verifica se l'username esiste già
+      const { data: existingUser } = await supabaseClient
         .from('profiles')
-        .upsert([
-          { username: username, email: email, profile_pic: null }
-        ], { onConflict: 'username' });
+        .select('*')
+        .eq('username', username);
 
-      if (error) {
-        console.error("Errore salvataggio profilo:", error.message);
-        alert("Errore durante la registrazione su Supabase.");
+      if (existingUser && existingUser.length > 0) {
+        alert("Questo username è già occupato! Scegline un altro.");
         return;
       }
 
-      userData = { email, username, profilePic: null, followers: [], following: [], highlights: [] };
+      const userId = generateUniqueId();
+      const now = new Date().toISOString();
+
+      const { error } = await supabaseClient
+        .from('profiles')
+        .insert([{ id: userId, username: username, email: email, profile_pic: null, last_username_change: now }]);
+
+      if (error) {
+        alert("Errore durante la registrazione su Supabase: " + error.message);
+        return;
+      }
+
+      userData = { id: userId, email, username, profilePic: null, followers: [], following: [], highlights: [], last_username_change: now };
       localStorage.setItem('daycap_userData', JSON.stringify(userData));
       initUI();
       alert(`Benvenuto in DayCap, @${username}! 🎉`);
@@ -306,7 +340,9 @@
     async function initUI() {
       if (!userData) { document.getElementById('auth-screen').style.display = 'flex'; return; }
       document.getElementById('auth-screen').style.display = 'none';
-      document.getElementById('username-display').innerText = "@" + userData.username;
+      
+      const isAdmin = (userData.email === ADMIN_EMAIL);
+      document.getElementById('username-display').innerHTML = `@${userData.username} ${isAdmin ? '<span style="font-size:0.75rem; background:var(--brand-orange); color:white; padding:2px 8px; border-radius:10px; margin-left:6px; vertical-align:middle;">👑 Creator</span>' : ''}`;
       
       if (userData.profilePic) {
         document.getElementById('avatar-img-element').src = userData.profilePic;
@@ -323,7 +359,61 @@
       await loadUserCircles();
     }
 
-    /* ESPLORA UTENTI E SEGUI */
+    /* IMPOSTAZIONI E CAMBIO USERNAME (14 GIORNI) */
+    function openSettingsModal() {
+      document.getElementById('settings-user-id').innerText = userData.id || "Non disponibile";
+      document.getElementById('settings-user-email').innerText = userData.email || "-";
+      document.getElementById('settings-new-username').value = userData.username;
+      openModal('settings-modal');
+    }
+
+    async function updateUsername() {
+      const newName = document.getElementById('settings-new-username').value.trim().replace('@', '');
+      if (!newName || newName === userData.username) return;
+
+      // Controllo 14 giorni
+      if (userData.last_username_change) {
+        const lastChange = new Date(userData.last_username_change);
+        const now = new Date();
+        const diffDays = (now - lastChange) / (1000 * 60 * 60 * 24);
+        if (diffDays < 14) {
+          const daysLeft = Math.ceil(14 - diffDays);
+          alert(`Puoi cambiare username tra ${daysLeft} giorni! È consentito un solo cambio ogni 14 giorni.`);
+          return;
+        }
+      }
+
+      // Verifica unicità
+      const { data: checkUser } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('username', newName);
+
+      if (checkUser && checkUser.length > 0) {
+        alert("Questo username è già preso da un altro utente!");
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const { error } = await supabaseClient
+        .from('profiles')
+        .update({ username: newName, last_username_change: now })
+        .eq('id', userData.id);
+
+      if (error) {
+        alert("Errore nell'aggiornamento: " + error.message);
+        return;
+      }
+
+      userData.username = newName;
+      userData.last_username_change = now;
+      localStorage.setItem('daycap_userData', JSON.stringify(userData));
+      initUI();
+      closeModal('settings-modal');
+      alert("Username aggiornato con successo! 🎉");
+    }
+
+    /* ESPLORA UTENTI E SEGUI CON ID */
     async function openUsersModal(type) {
       const titleEl = document.getElementById('users-modal-title');
       const container = document.getElementById('users-list-container');
@@ -332,60 +422,39 @@
         titleEl.innerText = 'Esplora Utenti DayCap 🌍';
         const { data: profiles, error } = await supabaseClient
           .from('profiles')
-          .select('username, profile_pic');
+          .select('id, username, email');
 
         if (error || !profiles || profiles.length === 0) {
           container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun utente trovato.</p>';
         } else {
           container.innerHTML = profiles
-            .filter(p => p.username !== userData.username)
+            .filter(p => p.id !== userData.id)
             .map(p => `
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-main); border-radius: 8px;">
-                <span>@${p.username}</span>
-                <button class="btn" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="followUser('${p.username}')">Segui ➕</button>
+                <span>@${p.username} ${p.email === ADMIN_EMAIL ? '👑' : ''}</span>
+                <button class="btn" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="followUser('${p.id}', '${p.username}')">Segui ➕</button>
               </div>
             `).join('');
         }
       } else if (type === 'followers') {
         titleEl.innerText = 'I tuoi Follower';
         const list = userData.followers || [];
-        if (list.length === 0) {
-          container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun follower al momento.</p>';
-        } else {
-          container.innerHTML = list.map((f, idx) => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-main); border-radius: 8px;">
-              <span>@${f}</span>
-              <button class="btn btn-danger" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="removeUserListItem('followers', ${idx})">Rimuovi</button>
-            </div>
-          `).join('');
-        }
+        container.innerHTML = list.length === 0 ? '<p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun follower al momento.</p>' : list.map(f => `<div style="padding: 10px; background: var(--bg-main); border-radius: 8px;"><span>@${f}</span></div>`).join('');
       } else {
         titleEl.innerText = 'Persone che segui';
         const list = userData.following || [];
-        if (list.length === 0) {
-          container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Non stai seguendo nessuno.</p>';
-        } else {
-          container.innerHTML = list.map((f, idx) => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-main); border-radius: 8px;">
-              <span>@${f}</span>
-              <button class="btn btn-danger" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="removeUserListItem('following', ${idx})">Smetti di seguire</button>
-            </div>
-          `).join('');
-        }
+        container.innerHTML = list.length === 0 ? '<p style="color: var(--text-secondary); font-size: 0.9rem;">Non stai seguendo nessuno.</p>' : list.map(f => `<div style="padding: 10px; background: var(--bg-main); border-radius: 8px;"><span>@${f}</span></div>`).join('');
       }
       openModal('users-list-modal');
     }
 
-    async function followUser(targetUsername) {
+    async function followUser(targetId, targetUsername) {
       if (!userData.following) userData.following = [];
-      if (userData.following.includes(targetUsername)) {
-        alert(`Segui già @${targetUsername}!`);
-        return;
-      }
+      if (userData.following.includes(targetUsername)) { alert(`Segui già @${targetUsername}!`); return; }
 
       const { error } = await supabaseClient
         .from('follows')
-        .insert([{ follower: userData.username, following: targetUsername }]);
+        .insert([{ follower_id: userData.id, following_id: targetId }]);
 
       if (error) {
         alert("Errore nel seguire l'utente: " + error.message);
@@ -400,36 +469,21 @@
     }
 
     async function searchAndFollowUser() {
-      const query = document.getElementById('search-user-input').value.trim();
+      const query = document.getElementById('search-user-input').value.trim().replace('@', '');
       if (!query) return;
-
-      const cleanUser = query.replace('@', '');
-      if (cleanUser === userData.username) { alert("Non puoi seguire te stesso!"); return; }
 
       const { data: foundUser, error } = await supabaseClient
         .from('profiles')
         .select('*')
-        .eq('username', cleanUser);
+        .eq('username', query);
 
       if (error || !foundUser || foundUser.length === 0) {
-        alert(`L'utente @${cleanUser} non esiste su DayCap! Controlla di aver scritto bene il nome.`);
+        alert(`L'utente @${query} non esiste su DayCap!`);
         return;
       }
 
-      await followUser(cleanUser);
+      await followUser(foundUser[0].id, foundUser[0].username);
       document.getElementById('search-user-input').value = '';
-    }
-
-    function removeUserListItem(type, index) {
-      const targetList = type === 'followers' ? userData.followers : userData.following;
-      const userName = targetList[index];
-      
-      if (confirm(`Sei sicuro di voler rimuovere @${userName}?`)) {
-        targetList.splice(index, 1);
-        localStorage.setItem('daycap_userData', JSON.stringify(userData));
-        initUI();
-        openUsersModal(type);
-      }
     }
 
     /* TIMELINE & CARICAMENTO */
@@ -774,8 +828,9 @@
       const members = membersData ? membersData.map(m => m.username) : [userData.username];
 
       container.innerHTML = members.map(m => `
-        <div style="padding: 10px; background: var(--bg-main); border-radius: 8px; font-weight:600;">
-          @${m} ${m === circle.owner ? '👑 (Proprietario)' : ''}
+        <div style="padding: 10px; background: var(--bg-main); border-radius: 8px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+          <span>@${m}</span>
+          ${m === circle.owner ? '<span style="font-size:0.7rem; background:var(--brand-orange); color:white; padding:2px 6px; border-radius:8px;">👑 Proprietario</span>' : ''}
         </div>
       `).join('');
 
@@ -862,16 +917,6 @@
         initUI();
       };
       r.readAsDataURL(file);
-    }
-
-    function openEditUsernameModal() { openModal('username-modal'); }
-    function saveUsername() {
-      const newName = document.getElementById('new-username-input').value.trim();
-      if (!newName) return;
-      userData.username = newName;
-      localStorage.setItem('daycap_userData', JSON.stringify(userData));
-      initUI();
-      closeModal('username-modal');
     }
 
     function switchTab(tabId, btn) {
