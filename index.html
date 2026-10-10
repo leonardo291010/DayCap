@@ -61,7 +61,7 @@
       <h3 style="font-size:1.1rem; margin-bottom:6px;">Verifica Email ✉️</h3>
       <p id="otp-instruction-text" style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:15px;">Abbiamo inviato un codice a 6 cifre alla tua email. Inseriscilo qui sotto:</p>
       
-      <input type="text" id="auth-otp-code" placeholder="123456" maxlength="6" style="text-align:center; font-size:1.4rem; letter-spacing:6px; font-weight:bold;">
+      <input type="text" id="auth-otp-code" placeholder="12345678" maxlength="8" style="text-align:center; font-size:1.4rem; letter-spacing:6px; font-weight:bold;">
       
       <button class="btn" style="margin-top: 15px;" onclick="verifyOtpCode()">Conferma Codice</button>
       <button class="btn btn-secondary" style="margin-top: 8px; font-size:0.8rem;" onclick="backToAuthStep1()">Indietro</button>
@@ -422,7 +422,7 @@
 
     async function verifyOtpCode() {
       const otpCode = document.getElementById('auth-otp-code').value.trim();
-      if (otpCode.length !== 6) { alert("Il codice OTP deve essere di 6 cifre."); return; }
+      if (otpCode.length !== 8) { alert("Il codice OTP deve essere di 6 cifre."); return; }
 
       // Verifica del token OTP con Supabase
       const { data, error } = await supabaseClient.auth.verifyOtp({
