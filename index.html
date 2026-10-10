@@ -273,22 +273,37 @@
 
   <script>
     let userData = JSON.parse(localStorage.getItem('daycap_userData')) || null;
-    let userCircles = JSON.parse(localStorage.getItem('daycap_circles')) || [];
+    let userCircles = [];
     let activeCircleIndex = null;
     let activeSlotHour = null;
     let activeHighlightIndex = null;
 
-    function handleRegister() {
+    // --- REGISTRAZIONE / PROFILO CLOUD ---
+    async function handleRegister() {
       const email = document.getElementById('auth-email').value.trim();
       const username = document.getElementById('auth-username').value.trim().replace('@', '');
       if (!email || !username) { alert("Inserisci dati validi."); return; }
 
+      // Salvataggio sul database Supabase (tabella profiles)
+      const { error } = await supabaseClient
+        .from('profiles')
+        .upsert([
+          { username: username, email: email, profile_pic: null }
+        ], { onConflict: 'username' });
+
+      if (error) {
+        console.error("Errore salvataggio profilo:", error.message);
+        alert("Errore durante la registrazione su Supabase.");
+        return;
+      }
+
       userData = { email, username, profilePic: null, followers: [], following: [], highlights: [] };
       localStorage.setItem('daycap_userData', JSON.stringify(userData));
       initUI();
+      alert(`Benvenuto in DayCap, @${username}! 🎉`);
     }
 
-    function initUI() {
+    async function initUI() {
       if (!userData) { document.getElementById('auth-screen').style.display = 'flex'; return; }
       document.getElementById('auth-screen').style.display = 'none';
       document.getElementById('username-display').innerText = "@" + userData.username;
@@ -305,7 +320,7 @@
       document.getElementById('following-count').innerText = userData.following ? userData.following.length : 0;
 
       renderHighlights();
-      renderCirclesList();
+      await loadUserCircles();
     }
 
     /* FOLLOWER / SEGUITI */
@@ -402,7 +417,6 @@
           img: e.target.result,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         });
-        localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
         renderTimeline();
         alert(`📸 Foto caricata con successo per lo slot delle ${currentHour}:00!`);
       };
@@ -498,7 +512,6 @@
 
       const circle = userCircles[activeCircleIndex];
       circle.timelineData.emojis[activeSlotHour] = val;
-      localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
       closeModal('slot-photos-modal');
       renderTimeline();
     }
@@ -528,7 +541,6 @@
       }
 
       userCircles[activeCircleIndex].challenge = { scheduledDate: dateVal };
-      localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
       closeModal('schedule-challenge-modal');
       updateChallengeUI();
       alert(`🎉 Sfida programmata per il ${dateVal}! Inizierà automaticamente alle 00:00.`);
@@ -612,58 +624,103 @@
       renderHighlights();
     }
 
-    /* CERCHIE & MEMBRI */
-    function createCircle() {
+    /* CERCHIE & MEMBRI CLOUD */
+    async function createCircle() {
       const name = document.getElementById('circle-name-input').value.trim();
       if (!name) return;
 
-      const newCircle = {
-        id: "DAYCAP-" + Math.floor(1000 + Math.random() * 9000),
-        name: name,
-        owner: userData.username,
-        members: [userData.username],
-        challenge: null,
-        timelineData: {
-          photos: Array.from({ length: 24 }, () => []),
-          emojis: Array.from({ length: 24 }, () => null)
-        }
-      };
+      const circleId = "DAYCAP-" + Math.floor(1000 + Math.random() * 9000);
 
-      userCircles.push(newCircle);
-      localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
+      // 1. Inserisce la cerchia in Supabase
+      const { error: circleError } = await supabaseClient
+        .from('circles')
+        .insert([{ id: circleId, name: name, owner: userData.username }]);
+
+      if (circleError) {
+        alert("Errore nella creazione della cerchia: " + circleError.message);
+        return;
+      }
+
+      // 2. Aggiunge il creatore come membro nella tabella circle_members
+      await supabaseClient
+        .from('circle_members')
+        .insert([{ circle_id: circleId, username: userData.username }]);
+
       closeModal('create-circle-modal');
-      renderCirclesList();
+      await loadUserCircles();
+      alert(`Cerchia "${name}" creata con successo! Codice: ${circleId}`);
     }
 
-    function joinCircleByCode() {
+    async function joinCircleByCode() {
       const code = document.getElementById('join-circle-code-input').value.trim().toUpperCase();
       if (!code) return;
 
-      let targetCircle = userCircles.find(c => c.id === code);
+      // 1. Cerca la cerchia su Supabase
+      const { data: foundCircles, error: searchError } = await supabaseClient
+        .from('circles')
+        .select('*')
+        .eq('id', code);
 
-      if (targetCircle) {
-        if (!targetCircle.members.includes(userData.username)) {
-          targetCircle.members.push(userData.username);
-        }
-      } else {
-        targetCircle = {
-          id: code,
-          name: "Cerchia " + code,
-          owner: "Utente Esterno",
-          members: [userData.username],
-          challenge: null,
-          timelineData: {
-            photos: Array.from({ length: 24 }, () => []),
-            emojis: Array.from({ length: 24 }, () => null)
-          }
-        };
-        userCircles.push(targetCircle);
+      if (searchError || !foundCircles || foundCircles.length === 0) {
+        alert("Cerchia non trovata con questo codice!");
+        return;
       }
 
-      localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
+      const targetCircle = foundCircles[0];
+
+      // 2. Verifica se sei già membro
+      const { data: existingMember } = await supabaseClient
+        .from('circle_members')
+        .select('*')
+        .eq('circle_id', code)
+        .eq('username', userData.username);
+
+      if (!existingMember || existingMember.length === 0) {
+        await supabaseClient
+          .from('circle_members')
+          .insert([{ circle_id: code, username: userData.username }]);
+      }
+
       closeModal('join-circle-modal');
+      await loadUserCircles();
+      alert(`Ti sei unito con successo alla cerchia ${targetCircle.name}! 🚀`);
+    }
+
+    async function loadUserCircles() {
+      if (!userData) return;
+
+      // 1. Trova le cerchie a cui partecipa l'utente
+      const { data: memberships, error } = await supabaseClient
+        .from('circle_members')
+        .select('circle_id')
+        .eq('username', userData.username);
+
+      if (error || !memberships || memberships.length === 0) {
+        userCircles = [];
+        renderCirclesList();
+        return;
+      }
+
+      const circleIds = memberships.map(m => m.circle_id);
+
+      // 2. Scarica i dettagli delle cerchie da Supabase
+      const { data: circlesData } = await supabaseClient
+        .from('circles')
+        .select('*')
+        .in('id', circleIds);
+
+      userCircles = circlesData || [];
+      // Assicura la struttura dati locale per la timeline se mancante
+      userCircles.forEach(c => {
+        if (!c.timelineData) {
+          c.timelineData = {
+            photos: Array.from({ length: 24 }, () => []),
+            emojis: Array.from({ length: 24 }, () => null)
+          };
+        }
+      });
+
       renderCirclesList();
-      alert(`Unito con successo alla cerchia ${targetCircle.name}!`);
     }
 
     function inviteToCircle() {
@@ -674,11 +731,18 @@
       else { navigator.clipboard.writeText(text); alert(`Codice copiato: ${code}`); }
     }
 
-    function openMembersModal() {
+    async function openMembersModal() {
       if (activeCircleIndex === null) return;
       const circle = userCircles[activeCircleIndex];
       const container = document.getElementById('circle-members-list');
-      const members = circle.members || [userData.username];
+
+      // Scarica i membri aggiornati da Supabase per questa cerchia
+      const { data: membersData } = await supabaseClient
+        .from('circle_members')
+        .select('username')
+        .eq('circle_id', circle.id);
+
+      const members = membersData ? membersData.map(m => m.username) : [userData.username];
 
       container.innerHTML = members.map(m => `
         <div style="padding: 10px; background: var(--bg-main); border-radius: 8px; font-weight:600;">
@@ -726,21 +790,29 @@
       renderTimeline();
     }
 
-    function leaveCircle(index) {
+    async function leaveCircle(index) {
       if (confirm("Vuoi davvero abbandonare questa cerchia?")) {
-        userCircles.splice(index, 1);
-        localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
+        const circle = userCircles[index];
+        await supabaseClient
+          .from('circle_members')
+          .delete()
+          .eq('circle_id', circle.id)
+          .eq('username', userData.username);
+
         closeCircle();
-        renderCirclesList();
+        await loadUserCircles();
       }
     }
 
-    function deleteCircle(index) {
+    async function deleteCircle(index) {
       if (confirm("Sei il proprietario. Vuoi eliminare definitivamente questa cerchia per tutti?")) {
-        userCircles.splice(index, 1);
-        localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
+        const circle = userCircles[index];
+        // Elimina i membri e poi la cerchia
+        await supabaseClient.from('circle_members').delete().eq('circle_id', circle.id);
+        await supabaseClient.from('circles').delete().eq('id', circle.id);
+
         closeCircle();
-        renderCirclesList();
+        await loadUserCircles();
       }
     }
 
