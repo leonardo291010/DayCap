@@ -4,16 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>DayCap</title>
-  <!-- Collegamento al file Manifest e Icone PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#121214">
-
-  <!-- Icona per iPhone / Android -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="icon" type="image/png" href="icon-192.png">
   <meta name="apple-mobile-web-app-title" content="DayCap">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="stylesheet" href="style.css">
+  
+  <!-- 1. Libreria Client Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- 2. Configurazione e Inizializzazione Supabase -->
+  <script>
+    const SUPABASE_URL = 'https://spgrcjwxnabipaxwiagk.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_2XI738GQ9KVn_qSpav4rgA_8KNST8RR';
+
+    // Creazione del client Supabase globale
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Test rapido di connessione al database
+    async function testSupabaseConnection() {
+        const { data, error } = await supabaseClient.from('profiles').select('*').limit(1);
+        if (error) {
+            console.error('Errore di connessione a Supabase:', error.message);
+        } else {
+            console.log('⚡ Connessione a Supabase riuscita! Dati:', data);
+        }
+    }
+
+    testSupabaseConnection();
+  </script>
 </head>
 <body>
 
@@ -63,7 +84,7 @@
       <h2 id="username-display" style="font-size:1.4rem; font-weight:700;">@username</h2>
     </div>
 
-    <!-- RICERCA UTENTI DA SEGUIRE -->
+    <!-- RICERCA UTENTI -->
     <div style="margin-bottom: 20px;">
       <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">CERCA PERSONE DA SEGUIRE</label>
       <div style="display:flex; gap:8px;">
@@ -105,7 +126,10 @@
       
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <h2 id="circle-title" style="font-size:1.6rem;">Nome Cerchia</h2>
-        <button class="btn btn-secondary" style="width:auto; padding:6px 12px; font-size:0.8rem;" onclick="inviteToCircle()">📲 Invita</button>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-secondary" style="width:auto; padding:6px 12px; font-size:0.8rem;" onclick="openMembersModal()">👥 Membri</button>
+          <button class="btn btn-secondary" style="width:auto; padding:6px 12px; font-size:0.8rem;" onclick="inviteToCircle()">📲 Invita</button>
+        </div>
       </div>
       
       <!-- PROGRAMMAZIONE SFIDA -->
@@ -119,20 +143,32 @@
         </div>
       </div>
 
-      <!-- PULSANTE SCATTO (GESTITO DINAMICAMENTE DALLA SFIDA) -->
-      <div style="display: flex; gap: 10px; margin-bottom: 25px;" id="shutter-container">
-        <label class="btn" id="shutter-btn-label" style="display: none;">
+      <!-- TASTO SCATTO (MOSTRATO SOLO SE LA SFIDA È ATTIVA) -->
+      <div id="shutter-wrapper" style="display: none; margin-bottom: 25px;">
+        <label class="btn">
           📷 Scatta / Carica Foto
           <input type="file" accept="image/*" onchange="handleTimelineUpload(event)">
         </label>
       </div>
 
-      <h3 style="margin-bottom: 12px; font-size:1rem;">Timeline 24 Ore</h3>
-      <div class="timeline" id="timeline"></div>
+      <!-- BOTTONI GESTIONE CERCHIA (ESCI / ELIMINA) -->
+      <div id="circle-action-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom: 20px;"></div>
+
+      <!-- AREA TIMELINE O MESSAGGIO ATTESA -->
+      <div id="timeline-section" style="display: none;">
+        <h3 style="margin-bottom: 12px; font-size:1rem;">Timeline 24 Ore</h3>
+        <div class="timeline" id="timeline"></div>
+      </div>
+
+      <div id="no-challenge-placeholder" style="text-align:center; padding: 40px 20px; background: var(--bg-card); border-radius: 14px; border: 1px dashed var(--border-color); margin-top: 20px;">
+        <p style="font-size: 1.5rem; margin-bottom: 8px;">⏳</p>
+        <h4 style="font-size:0.95rem; margin-bottom: 4px;">Nessuna sfida in corso</h4>
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">Programma una sfida per sbloccare la Timeline e iniziare a condividere le foto a partire da mezzanotte (00:00)!</p>
+      </div>
     </div>
   </div>
 
-  <!-- MODALE PROGRAMMA SFIDA -->
+  <!-- MODALI -->
   <div class="modal" id="schedule-challenge-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 5px;">Programma Sfida 🏆</h3>
@@ -143,7 +179,14 @@
     </div>
   </div>
 
-  <!-- MODALE FOTO O EMOJI FASCIA ORARIA -->
+  <div class="modal" id="circle-members-modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 15px;">Membri della Cerchia 👥</h3>
+      <div id="circle-members-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto;"></div>
+      <button class="btn btn-secondary" style="margin-top: 20px;" onclick="closeModal('circle-members-modal')">Chiudi</button>
+    </div>
+  </div>
+
   <div class="modal" id="slot-photos-modal">
     <div class="modal-content">
       <h3 id="slot-modal-title" style="margin-bottom: 5px;">Fascia Oraria</h3>
@@ -151,7 +194,7 @@
       <div class="gallery-grid" id="slot-photos-container"></div>
       
       <div id="slot-emoji-action-section" style="display:none; margin-top:15px; border-top:1px solid var(--border-color); padding-top:12px;">
-        <p style="font-size:0.8rem; color:var(--brand-orange); margin-bottom:6px;">Non hai caricato foto? Inserisci un'emoji a tua scelta (es: 👨‍🏫 per scuola, 🏋️ per palestra):</p>
+        <p style="font-size:0.8rem; color:var(--brand-orange); margin-bottom:6px;">Inserisci un'emoji per questa fascia:</p>
         <div style="display:flex; gap:8px;">
           <input type="text" id="slot-custom-emoji-input" placeholder="Inserisci emoji..." style="margin:0;">
           <button class="btn btn-success" style="width:auto; padding:0 14px;" onclick="saveSlotCustomEmoji()">Salva</button>
@@ -162,7 +205,6 @@
     </div>
   </div>
 
-  <!-- MODALE VISUALIZZA / ELIMINA STORIA IN EVIDENZA -->
   <div class="modal" id="view-highlight-modal">
     <div class="modal-content" style="text-align:center;">
       <h3 style="margin-bottom: 10px;">Storia in Evidenza</h3>
@@ -172,7 +214,6 @@
     </div>
   </div>
 
-  <!-- MODALE LISTA UTENTI (FOLLOWER / SEGUITI) -->
   <div class="modal" id="users-list-modal">
     <div class="modal-content">
       <h3 id="users-modal-title" style="margin-bottom: 15px;">Lista Utenti</h3>
@@ -183,7 +224,6 @@
     </div>
   </div>
 
-  <!-- UNISCITI A CERCHIA -->
   <div class="modal" id="join-circle-modal">
     <div class="modal-content">
       <h3>Unisciti a una Cerchia</h3>
@@ -193,7 +233,6 @@
     </div>
   </div>
 
-  <!-- CREA CERCHIA -->
   <div class="modal" id="create-circle-modal">
     <div class="modal-content">
       <h3>Crea Nuova Cerchia</h3>
@@ -203,7 +242,6 @@
     </div>
   </div>
 
-  <!-- POSTA -->
   <div class="modal" id="inbox-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 15px;">La Tua Posta 📩</h3>
@@ -214,7 +252,6 @@
     </div>
   </div>
 
-  <!-- MODIFICA USERNAME -->
   <div class="modal" id="username-modal">
     <div class="modal-content">
       <h3>Modifica Username</h3>
@@ -243,7 +280,7 @@
 
     function handleRegister() {
       const email = document.getElementById('auth-email').value.trim();
-      const username = document.getElementById('auth-username').value.trim();
+      const username = document.getElementById('auth-username').value.trim().replace('@', '');
       if (!email || !username) { alert("Inserisci dati validi."); return; }
 
       userData = { email, username, profilePic: null, followers: [], following: [], highlights: [] };
@@ -271,7 +308,7 @@
       renderCirclesList();
     }
 
-    /* APRI MODALE FOLLOWER / SEGUITI CON OPZIONE DI ELIMINAZIONE */
+    /* FOLLOWER / SEGUITI */
     function openUsersModal(type) {
       const titleEl = document.getElementById('users-modal-title');
       const container = document.getElementById('users-list-container');
@@ -318,13 +355,17 @@
       }
     }
 
-    /* RICERCA UTENTI */
     function searchAndFollowUser() {
       const query = document.getElementById('search-user-input').value.trim();
       if (!query) return;
 
       const cleanUser = query.replace('@', '');
       if (cleanUser === userData.username) { alert("Non puoi seguire te stesso!"); return; }
+
+      if (cleanUser.length < 2) {
+        alert("Inserisci un username valido.");
+        return;
+      }
 
       if (!userData.following) userData.following = [];
 
@@ -339,7 +380,7 @@
       document.getElementById('search-user-input').value = '';
     }
 
-    /* CARICAMENTO FOTO TIMELINE (SPECIFICA DELLA CERCHIA ATTIVA) */
+    /* TIMELINE & CARICAMENTO */
     function handleTimelineUpload(event) {
       if (activeCircleIndex === null) return;
       const file = event.target.files[0];
@@ -368,7 +409,6 @@
       reader.readAsDataURL(file);
     }
 
-    /* RENDER TIMELINE DELLA CERCHIA CORRENTE */
     function renderTimeline() {
       if (activeCircleIndex === null) return;
       const circle = userCircles[activeCircleIndex];
@@ -433,23 +473,19 @@
       const customEmoji = circle.timelineData.emojis[hour];
       const container = document.getElementById('slot-photos-container');
       const emojiSection = document.getElementById('slot-emoji-action-section');
-      const currentHour = new Date().getHours();
 
       document.getElementById('slot-modal-title').innerText = `Fascia Oraria ${String(hour).padStart(2, '0')}:00`;
 
       if (photos.length > 0) {
         document.getElementById('slot-modal-subtitle').innerText = `${photos.length} foto presenti:`;
         container.innerHTML = photos.map(p => `<img src="${p.img}">`).join('');
-        emojiSection.style.display = 'none';
+        emojiSection.style.display = 'block';
+        document.getElementById('slot-custom-emoji-input').value = customEmoji || '';
       } else {
         document.getElementById('slot-modal-subtitle').innerText = "Nessuna foto presente per questa fascia.";
         container.innerHTML = '';
-        if (hour <= currentHour) {
-          emojiSection.style.display = 'block';
-          document.getElementById('slot-custom-emoji-input').value = customEmoji || '';
-        } else {
-          emojiSection.style.display = 'none';
-        }
+        emojiSection.style.display = 'block';
+        document.getElementById('slot-custom-emoji-input').value = customEmoji || '';
       }
 
       openModal('slot-photos-modal');
@@ -467,7 +503,7 @@
       renderTimeline();
     }
 
-    /* PROGRAMMAZIONE SFIDA */
+    /* PROGRAMMAZIONE E VISIBILITÀ SFIDA */
     function openScheduleModal() {
       const today = new Date();
       today.setDate(today.getDate() + 1);
@@ -502,11 +538,15 @@
       if (activeCircleIndex === null) return;
       const circle = userCircles[activeCircleIndex];
       const statusText = document.getElementById('challenge-status-text');
-      const shutterBtnLabel = document.getElementById('shutter-btn-label');
+      const shutterWrapper = document.getElementById('shutter-wrapper');
+      const timelineSection = document.getElementById('timeline-section');
+      const placeholder = document.getElementById('no-challenge-placeholder');
 
-      if (!circle.challenge) {
+      if (!circle.challenge || !circle.challenge.scheduledDate) {
         statusText.innerText = "Nessuna sfida programmata.";
-        shutterBtnLabel.style.display = 'none';
+        shutterWrapper.style.display = 'none';
+        timelineSection.style.display = 'none';
+        placeholder.style.display = 'block';
         return;
       }
 
@@ -515,13 +555,19 @@
 
       if (chal.scheduledDate > todayStr) {
         statusText.innerText = `Programmata per il ${chal.scheduledDate} (Start ore 00:00)`;
-        shutterBtnLabel.style.display = 'none';
+        shutterWrapper.style.display = 'none';
+        timelineSection.style.display = 'none';
+        placeholder.style.display = 'block';
       } else if (chal.scheduledDate === todayStr) {
         statusText.innerText = `🔥 SFIDA IN CORSO OGGI!`;
-        shutterBtnLabel.style.display = 'inline-block';
+        shutterWrapper.style.display = 'block';
+        timelineSection.style.display = 'block';
+        placeholder.style.display = 'none';
       } else {
         statusText.innerText = `Sfida terminata.`;
-        shutterBtnLabel.style.display = 'none';
+        shutterWrapper.style.display = 'none';
+        timelineSection.style.display = 'none';
+        placeholder.style.display = 'block';
       }
     }
 
@@ -566,21 +612,24 @@
       renderHighlights();
     }
 
-    /* CERCHIE */
+    /* CERCHIE & MEMBRI */
     function createCircle() {
       const name = document.getElementById('circle-name-input').value.trim();
       if (!name) return;
 
-      userCircles.push({
+      const newCircle = {
         id: "DAYCAP-" + Math.floor(1000 + Math.random() * 9000),
         name: name,
+        owner: userData.username,
+        members: [userData.username],
         challenge: null,
         timelineData: {
           photos: Array.from({ length: 24 }, () => []),
           emojis: Array.from({ length: 24 }, () => null)
         }
-      });
+      };
 
+      userCircles.push(newCircle);
       localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
       closeModal('create-circle-modal');
       renderCirclesList();
@@ -590,18 +639,31 @@
       const code = document.getElementById('join-circle-code-input').value.trim().toUpperCase();
       if (!code) return;
 
-      userCircles.push({ 
-        id: code, 
-        name: "Cerchia (" + code + ")", 
-        challenge: null,
-        timelineData: {
-          photos: Array.from({ length: 24 }, () => []),
-          emojis: Array.from({ length: 24 }, () => null)
+      let targetCircle = userCircles.find(c => c.id === code);
+
+      if (targetCircle) {
+        if (!targetCircle.members.includes(userData.username)) {
+          targetCircle.members.push(userData.username);
         }
-      });
+      } else {
+        targetCircle = {
+          id: code,
+          name: "Cerchia " + code,
+          owner: "Utente Esterno",
+          members: [userData.username],
+          challenge: null,
+          timelineData: {
+            photos: Array.from({ length: 24 }, () => []),
+            emojis: Array.from({ length: 24 }, () => null)
+          }
+        };
+        userCircles.push(targetCircle);
+      }
+
       localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
       closeModal('join-circle-modal');
       renderCirclesList();
+      alert(`Unito con successo alla cerchia ${targetCircle.name}!`);
     }
 
     function inviteToCircle() {
@@ -610,6 +672,21 @@
       const text = `Unisciti alla mia cerchia su DayCap! Codice: ${code}`;
       if (navigator.share) navigator.share({ title: 'Invito DayCap', text: text });
       else { navigator.clipboard.writeText(text); alert(`Codice copiato: ${code}`); }
+    }
+
+    function openMembersModal() {
+      if (activeCircleIndex === null) return;
+      const circle = userCircles[activeCircleIndex];
+      const container = document.getElementById('circle-members-list');
+      const members = circle.members || [userData.username];
+
+      container.innerHTML = members.map(m => `
+        <div style="padding: 10px; background: var(--bg-main); border-radius: 8px; font-weight:600;">
+          @${m} ${m === circle.owner ? '👑 (Proprietario)' : ''}
+        </div>
+      `).join('');
+
+      openModal('circle-members-modal');
     }
 
     function renderCirclesList() {
@@ -630,11 +707,41 @@
 
     function openCircle(index) {
       activeCircleIndex = index;
-      document.getElementById('circle-title').innerText = userCircles[index].name;
+      const circle = userCircles[index];
+      document.getElementById('circle-title').innerText = circle.name;
       document.getElementById('circles-list-view').style.display = 'none';
       document.getElementById('circle-detail-view').style.display = 'block';
+
+      const actionContainer = document.getElementById('circle-action-container');
+      
+      let html = `<button class="btn btn-secondary" onclick="leaveCircle(${index})">🚪 Abbandona Cerchia</button>`;
+      
+      if (circle.owner === userData.username) {
+        html += `<button class="btn btn-danger" onclick="deleteCircle(${index})">🗑️ Elimina Cerchia (Proprietario)</button>`;
+      }
+      
+      actionContainer.innerHTML = html;
+
       updateChallengeUI();
       renderTimeline();
+    }
+
+    function leaveCircle(index) {
+      if (confirm("Vuoi davvero abbandonare questa cerchia?")) {
+        userCircles.splice(index, 1);
+        localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
+        closeCircle();
+        renderCirclesList();
+      }
+    }
+
+    function deleteCircle(index) {
+      if (confirm("Sei il proprietario. Vuoi eliminare definitivamente questa cerchia per tutti?")) {
+        userCircles.splice(index, 1);
+        localStorage.setItem('daycap_circles', JSON.stringify(userCircles));
+        closeCircle();
+        renderCirclesList();
+      }
     }
 
     function closeCircle() {
@@ -677,7 +784,6 @@
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    // REGISTRAZIONE SERVICE WORKER
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
