@@ -70,7 +70,7 @@
     <div class="top-bar" style="display:flex; justify-content:space-between; align-items:center;">
       <button class="inbox-btn" onclick="openSettingsModal()" style="font-size:1.2rem; background:transparent; border:none; cursor:pointer;">⚙️</button>
       <span style="font-weight:bold; font-size:1.1rem; color:var(--brand-orange);">DayCap</span>
-      <button class="inbox-btn" onclick="openModal('inbox-modal')">📩 Posta</button>
+      <button class="inbox-btn" onclick="openInboxModal()">📩 Posta <span id="inbox-badge" style="display:none; background:red; color:white; font-size:0.7rem; border-radius:50%; padding:2px 6px; margin-left:4px;">0</span></button>
     </div>
 
     <div class="profile-header">
@@ -102,7 +102,7 @@
       <label style="font-size:0.8rem; color:var(--text-secondary); font-weight:600;">CERCA PERSONE DA SEGUIRE</label>
       <div style="display:flex; gap:8px; margin-top:4px;">
         <input type="text" id="search-user-input" placeholder="Cerca @username..." style="margin:0;">
-        <button class="btn" style="width:auto; padding:0 16px;" onclick="searchAndFollowUser()">Cerca</button>
+        <button class="btn" style="width:auto; padding:0 16px;" onclick="searchAndFollowUser()">Richiedi</button>
       </div>
     </div>
 
@@ -271,10 +271,11 @@
     </div>
   </div>
 
+  <!-- MODALE POSTA / NOTIFICHE RICHIESTE FOLLOW -->
   <div class="modal" id="inbox-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 15px;">La Tua Posta 📩</h3>
-      <div id="notifications-list">
+      <div id="notifications-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;">
         <p style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-size: 0.85rem;">Nessuna nuova notifica.</p>
       </div>
       <button class="btn btn-secondary" style="margin-top:15px;" onclick="closeModal('inbox-modal')">Chiudi</button>
@@ -302,6 +303,7 @@
     let activeCircleIndex = null;
     let activeSlotHour = null;
     let activeHighlightIndex = null;
+    let pendingFollowRequests = [];
 
     function generateUniqueId() {
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -451,11 +453,11 @@
       document.getElementById('auth-step-1').style.display = 'block';
     }
 
-    /* CARICAMENTO SEGUITI E FOLLOWER CORRETTO */
+    /* CARICAMENTO FOLLOW E RICHIESTE IN SOSPESO */
     async function loadFollowData() {
       if (!userData || !userData.id) return;
 
-      // Persone che segui
+      // 1. Persone che segui
       const { data: followingRows } = await supabaseClient
         .from('follows')
         .select('following_id')
@@ -469,7 +471,7 @@
         userData.following = [];
       }
 
-      // Persone che ti seguono
+      // 2. Persone che ti seguono (Follower confermati)
       const { data: followerRows } = await supabaseClient
         .from('follows')
         .select('follower_id')
@@ -481,6 +483,18 @@
         userData.followers = profs ? profs.map(p => p.username) : [];
       } else {
         userData.followers = [];
+      }
+
+      // 3. Richieste di Follow in arrivo (salvate in localStorage/cloud)
+      pendingFollowRequests = JSON.parse(localStorage.getItem(`daycap_requests_${userData.id}`)) || [];
+
+      // Aggiorna Badge Notifiche Posta
+      const badge = document.getElementById('inbox-badge');
+      if (pendingFollowRequests.length > 0) {
+        badge.innerText = pendingFollowRequests.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
       }
 
       localStorage.setItem('daycap_userData', JSON.stringify(userData));
@@ -568,7 +582,7 @@
       }
     }
 
-    /* ESPLORA E FOLLOW DIRETTO */
+    /* ESPLORA E INVIO RICHIESTA FOLLOW */
     async function openUsersModal(type) {
       const titleEl = document.getElementById('users-modal-title');
       const container = document.getElementById('users-list-container');
@@ -594,8 +608,8 @@
                     ${avatarHTML}
                     <span>@${p.username} ${p.email === ADMIN_EMAIL ? '👑' : ''}</span>
                   </div>
-                  <button class="btn ${isFollowing ? 'btn-secondary' : ''}" style="width: auto; padding: 6px 14px; font-size: 0.75rem;" onclick="toggleFollow('${p.username}', ${isFollowing})">
-                    ${isFollowing ? 'Smetti di seguire' : 'Segui ➕'}
+                  <button class="btn ${isFollowing ? 'btn-secondary' : ''}" style="width: auto; padding: 6px 14px; font-size: 0.75rem;" onclick="requestOrUnfollow('${p.username}', ${isFollowing})">
+                    ${isFollowing ? 'Smetti di seguire' : 'Richiedi 📩'}
                   </button>
                 </div>
               `;
@@ -622,7 +636,7 @@
           container.innerHTML = list.map(u => `
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-main); border-radius: 8px;">
               <span style="font-weight:600;">@${u}</span>
-              <button class="btn btn-secondary" style="width:auto; padding:4px 10px; font-size:0.7rem;" onclick="toggleFollow('${u}', true)">Smetti di seguire</button>
+              <button class="btn btn-secondary" style="width:auto; padding:4px 10px; font-size:0.7rem;" onclick="requestOrUnfollow('${u}', true)">Smetti di seguire</button>
             </div>
           `).join('');
         }
@@ -630,7 +644,7 @@
       openModal('users-list-modal');
     }
 
-    async function toggleFollow(targetUsername, isCurrentlyFollowing) {
+    async function requestOrUnfollow(targetUsername, isCurrentlyFollowing) {
       const { data: targetProf } = await supabaseClient
         .from('profiles')
         .select('id')
@@ -640,20 +654,38 @@
       if (!targetProf) { alert("Utente non trovato!"); return; }
 
       if (isCurrentlyFollowing) {
-        await supabaseClient
-          .from('follows')
-          .delete()
-          .eq('follower_id', userData.id)
-          .eq('following_id', targetProf.id);
-      } else {
-        await supabaseClient
-          .from('follows')
-          .insert([{ follower_id: userData.id, following_id: targetProf.id }]);
-      }
+        // Se lo stiamo già seguendo, smettiamo di seguirlo direttamente
+        if (confirm(`Vuoi smettere di seguire @${targetUsername}?`)) {
+          await supabaseClient
+            .from('follows')
+            .delete()
+            .eq('follower_id', userData.id)
+            .eq('following_id', targetProf.id);
 
-      await loadFollowData();
-      initUI();
-      closeModal('users-list-modal');
+          await loadFollowData();
+          initUI();
+          closeModal('users-list-modal');
+        }
+      } else {
+        // Se NON lo seguiamo, gli inviamo la RICHIESTA NELLA POSTA
+        let reqList = JSON.parse(localStorage.getItem(`daycap_requests_${targetProf.id}`)) || [];
+        
+        // Controlla se la richiesta è già stata inviata
+        if (reqList.some(r => r.fromId === userData.id)) {
+          alert(`Hai già inviato una richiesta a @${targetUsername}! In attesa che accetti.`);
+          return;
+        }
+
+        reqList.push({
+          fromId: userData.id,
+          fromUsername: userData.username,
+          date: new Date().toLocaleDateString()
+        });
+
+        localStorage.setItem(`daycap_requests_${targetProf.id}`, JSON.stringify(reqList));
+        alert(`📩 Richiesta inviata a @${targetUsername}! Potrai seguirlo appena accetterà.`);
+        closeModal('users-list-modal');
+      }
     }
 
     async function searchAndFollowUser() {
@@ -667,8 +699,63 @@
       if (target.username === userData.username) { alert("Non puoi seguire te stesso!"); return; }
 
       const isFollowing = userData.following && userData.following.includes(target.username);
-      await toggleFollow(target.username, isFollowing);
+      await requestOrUnfollow(target.username, isFollowing);
       document.getElementById('search-user-input').value = '';
+    }
+
+    /* POSTA 📩 - ACCETTA / RIFIUTA RICHIESTE */
+    function openInboxModal() {
+      const container = document.getElementById('notifications-list');
+      pendingFollowRequests = JSON.parse(localStorage.getItem(`daycap_requests_${userData.id}`)) || [];
+
+      if (pendingFollowRequests.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-size: 0.85rem;">Nessuna nuova richiesta di follow.</p>';
+      } else {
+        container.innerHTML = pendingFollowRequests.map((req, index) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-main); border-radius: 10px; border: 1px solid var(--border-color);">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">@${req.fromUsername}</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">Vuoi iniziare a seguirti</div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--brand-orange);" onclick="acceptFollowRequest(${index})">Accetta</button>
+              <button class="btn btn-secondary" style="width: auto; padding: 6px 10px; font-size: 0.75rem;" onclick="rejectFollowRequest(${index})">Rifiuta</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      openModal('inbox-modal');
+    }
+
+    async function acceptFollowRequest(index) {
+      const req = pendingFollowRequests[index];
+      if (!req) return;
+
+      // Inseriamo la relazione ufficiale nel DB Supabase
+      const { error } = await supabaseClient
+        .from('follows')
+        .insert([{ follower_id: req.fromId, following_id: userData.id }]);
+
+      if (error && error.code !== '23505') {
+        alert("Errore nell'accettare la richiesta: " + error.message);
+        return;
+      }
+
+      // Rimuoviamo la richiesta dalla lista in sospeso
+      pendingFollowRequests.splice(index, 1);
+      localStorage.setItem(`daycap_requests_${userData.id}`, JSON.stringify(pendingFollowRequests));
+
+      alert(`🎉 Ora @${req.fromUsername} ti segue!`);
+      await loadFollowData();
+      initUI();
+      openInboxModal();
+    }
+
+    function rejectFollowRequest(index) {
+      pendingFollowRequests.splice(index, 1);
+      localStorage.setItem(`daycap_requests_${userData.id}`, JSON.stringify(pendingFollowRequests));
+      openInboxModal();
     }
 
     /* TIMELINE & CERCHIE */
