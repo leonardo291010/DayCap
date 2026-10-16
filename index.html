@@ -56,12 +56,12 @@
       <p id="auth-switch-mode-text" style="font-size:0.75rem; color:var(--text-secondary); text-align:center; margin-top:12px; cursor:pointer;" onclick="toggleAuthRegisterMode()">Primo accesso? Clicca qui per registrarti</p>
     </div>
 
-    <!-- STEP 2: INSERIMENTO CODICE OTP A 6 CIFRE -->
+    <!-- STEP 2: INSERIMENTO CODICE OTP A 6/8 CIFRE -->
     <div id="auth-step-2" class="auth-card" style="display: none;">
       <h3 style="font-size:1.1rem; margin-bottom:6px;">Verifica Email ✉️</h3>
-      <p id="otp-instruction-text" style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:15px;">Abbiamo inviato un codice a 8 cifre alla tua email. Inseriscilo qui sotto:</p>
+      <p id="otp-instruction-text" style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:15px;">Abbiamo inviato un codice alla tua email. Inseriscilo qui sotto:</p>
       
-      <input type="text" id="auth-otp-code" placeholder="12345678" maxlength="8" style="text-align:center; font-size:1.4rem; letter-spacing:6px; font-weight:bold;">
+      <input type="text" id="auth-otp-code" placeholder="123456" maxlength="8" style="text-align:center; font-size:1.4rem; letter-spacing:6px; font-weight:bold;">
       
       <button class="btn" style="margin-top: 15px;" onclick="verifyOtpCode()">Conferma Codice</button>
       <button class="btn btn-secondary" style="margin-top: 8px; font-size:0.8rem;" onclick="backToAuthStep1()">Indietro</button>
@@ -182,29 +182,23 @@
     </div>
   </div>
 
-  <!-- MODALE IMPOSTAZIONI ACCOUNT -->
+  <!-- MODALI VARI -->
   <div class="modal" id="settings-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 15px;">Impostazioni Account ⚙️</h3>
       <div style="text-align:left; font-size:0.85rem; display:flex; flex-direction:column; gap:12px; margin-bottom:15px;">
         <div><strong>Tuo ID Univoco:</strong> <span id="settings-user-id" style="color:var(--brand-orange); font-family:monospace;">-</span></div>
-        
-        <!-- CAMBIO EMAIL -->
         <div>
           <label style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">EMAIL ATTUALE</label>
           <input type="email" id="settings-new-email" style="margin-top:4px;">
           <button class="btn btn-secondary" style="margin-top:4px; padding:6px; font-size:0.8rem;" onclick="requestEmailChange()">Aggiorna Email (Con Verifica OTP)</button>
         </div>
-        
-        <!-- CAMBIO USERNAME -->
         <div>
           <label style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">CAMBIA USERNAME (Consentito ogni 14 giorni)</label>
           <input type="text" id="settings-new-username" placeholder="Nuovo username..." style="margin-top:4px;">
           <button class="btn btn-secondary" style="margin-top:4px; padding:6px; font-size:0.8rem;" onclick="updateUsername()">Aggiorna Username</button>
         </div>
       </div>
-
-      <!-- DISCONNETTI E CHIUDI -->
       <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
         <button class="btn btn-danger" onclick="logoutUser()">🚪 Disconnetti Account</button>
         <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Chiudi</button>
@@ -212,7 +206,6 @@
     </div>
   </div>
 
-  <!-- MODALE PROGRAMMAZIONE SFIDA -->
   <div class="modal" id="schedule-challenge-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 5px;">Programma Sfida 🏆</h3>
@@ -223,7 +216,6 @@
     </div>
   </div>
 
-  <!-- MODALE MEMBRI -->
   <div class="modal" id="circle-members-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 15px;">Membri della Cerchia 👥</h3>
@@ -232,13 +224,11 @@
     </div>
   </div>
 
-  <!-- MODALE FOTO SLOT ORARIO -->
   <div class="modal" id="slot-photos-modal">
     <div class="modal-content">
       <h3 id="slot-modal-title" style="margin-bottom: 5px;">Fascia Oraria</h3>
       <p id="slot-modal-subtitle" style="font-size: 0.8rem; color: var(--text-secondary);"></p>
       <div class="gallery-grid" id="slot-photos-container"></div>
-      
       <div id="slot-emoji-action-section" style="display:none; margin-top:15px; border-top:1px solid var(--border-color); padding-top:12px;">
         <p style="font-size:0.8rem; color:var(--brand-orange); margin-bottom:6px;">Inserisci un'emoji per questa fascia:</p>
         <div style="display:flex; gap:8px;">
@@ -246,12 +236,10 @@
           <button class="btn btn-success" style="width:auto; padding:0 14px;" onclick="saveSlotCustomEmoji()">Salva</button>
         </div>
       </div>
-
       <button class="btn btn-secondary" style="margin-top:18px;" onclick="closeModal('slot-photos-modal')">Chiudi</button>
     </div>
   </div>
 
-  <!-- MODALE VISUALIZZAZIONE EVIDENZA -->
   <div class="modal" id="view-highlight-modal">
     <div class="modal-content" style="text-align:center;">
       <h3 style="margin-bottom: 10px;">Storia in Evidenza</h3>
@@ -261,7 +249,6 @@
     </div>
   </div>
 
-  <!-- MODALE UTENTI / LISTE -->
   <div class="modal" id="users-list-modal">
     <div class="modal-content">
       <h3 id="users-modal-title" style="margin-bottom: 15px;">Lista Utenti</h3>
@@ -272,7 +259,6 @@
     </div>
   </div>
 
-  <!-- MODALE UNISCITI A CERCHIA -->
   <div class="modal" id="join-circle-modal">
     <div class="modal-content">
       <h3>Unisciti a una Cerchia</h3>
@@ -282,7 +268,6 @@
     </div>
   </div>
 
-  <!-- MODALE CREA CERCHIA -->
   <div class="modal" id="create-circle-modal">
     <div class="modal-content">
       <h3>Crea Nuova Cerchia</h3>
@@ -292,7 +277,6 @@
     </div>
   </div>
 
-  <!-- MODALE POSTA -->
   <div class="modal" id="inbox-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 15px;">La Tua Posta 📩</h3>
@@ -364,7 +348,6 @@
       if (inputVal.includes('@') && !inputVal.startsWith('@')) {
         targetEmail = inputVal.toLowerCase();
       } else {
-        // Se ha inserito uno username, cerchiamo l'email associata nel DB profiles
         const searchUsername = inputVal.replace('@', '');
         const { data: prof, error } = await supabaseClient
           .from('profiles')
@@ -385,7 +368,6 @@
         const usernameInput = document.getElementById('auth-new-username').value.trim().replace('@', '');
         if (!usernameInput) { alert("Scegli uno username per registrarti."); return; }
 
-        // Verifica se l'email o l'username esistono già
         const { data: checkEmail } = await supabaseClient.from('profiles').select('*').eq('email', pendingEmail);
         if (checkEmail && checkEmail.length > 0) { alert("Questa email è già registrata!"); return; }
 
@@ -394,7 +376,6 @@
 
         pendingUsername = usernameInput;
       } else {
-        // Controllo se l'email esiste nel database per il login
         const { data: checkUser } = await supabaseClient.from('profiles').select('*').eq('email', pendingEmail);
         if (!checkUser || checkUser.length === 0) {
           alert("Nessun account associato a questa email. Registrati prima!");
@@ -403,7 +384,6 @@
         pendingUsername = checkUser[0].username;
       }
 
-      // INVIO CODICE OTP TRAMITE SUPABASE AUTH
       const { error } = await supabaseClient.auth.signInWithOtp({
         email: pendingEmail,
         options: { shouldCreateUser: true }
@@ -414,17 +394,15 @@
         return;
       }
 
-      // Passiamo alla schermata di inserimento codice
       document.getElementById('auth-step-1').style.display = 'none';
       document.getElementById('auth-step-2').style.display = 'block';
-      document.getElementById('otp-instruction-text').innerText = `Inserisci il codice a 6 cifre inviato a ${pendingEmail}:`;
+      document.getElementById('otp-instruction-text').innerText = `Inserisci il codice inviato a ${pendingEmail}:`;
     }
 
     async function verifyOtpCode() {
       const otpCode = document.getElementById('auth-otp-code').value.trim();
-      if (otpCode.length !== 8) { alert("Il codice OTP deve essere di 6 cifre."); return; }
+      if (otpCode.length < 6) { alert("Inserisci un codice OTP valido."); return; }
 
-      // Verifica del token OTP con Supabase
       const { data, error } = await supabaseClient.auth.verifyOtp({
         email: pendingEmail,
         token: otpCode,
@@ -436,7 +414,6 @@
         return;
       }
 
-      // Se è una nuova registrazione, salviamo il profilo nella tabella profiles
       if (isRegisterMode) {
         const userId = generateUniqueId();
         const now = new Date().toISOString();
@@ -450,9 +427,8 @@
           return;
         }
 
-        userData = { id: userId, email: pendingEmail, username: pendingUsername, profilePic: null, followers: [], following: [], highlights: [], last_username_change: now };
+        userData = { id: userId, email: pendingEmail, username: pendingUsername, profilePic: null, highlights: [], last_username_change: now };
       } else {
-        // Recuperiamo i dati completi dal profilo esistente
         const { data: userProf } = await supabaseClient
           .from('profiles')
           .select('*')
@@ -464,8 +440,6 @@
           email: userProf.email,
           username: userProf.username,
           profilePic: userProf.profile_pic || null,
-          followers: [],
-          following: [],
           highlights: [],
           last_username_change: userProf.last_username_change
         };
@@ -473,6 +447,7 @@
 
       localStorage.setItem('daycap_userData', JSON.stringify(userData));
       document.getElementById('auth-otp-code').value = '';
+      await loadFollowData();
       initUI();
       alert(`Accesso effettuato con successo, @${userData.username}! 🎉`);
     }
@@ -482,6 +457,27 @@
       document.getElementById('auth-step-1').style.display = 'block';
     }
 
+    async function loadFollowData() {
+      if (!userData) return;
+      
+      // Carica i seguiti
+      const { data: followingData } = await supabaseClient
+        .from('follows')
+        .select('following')
+        .eq('follower', userData.username);
+      
+      userData.following = followingData ? followingData.map(f => f.following) : [];
+
+      // Carica i follower
+      const { data: followerData } = await supabaseClient
+        .from('follows')
+        .select('follower')
+        .eq('following', userData.username);
+
+      userData.followers = followerData ? followerData.map(f => f.follower) : [];
+      localStorage.setItem('daycap_userData', JSON.stringify(userData));
+    }
+
     async function initUI() {
       if (!userData) { 
         document.getElementById('auth-screen').style.display = 'flex'; 
@@ -489,6 +485,8 @@
       }
       document.getElementById('auth-screen').style.display = 'none';
       
+      await loadFollowData();
+
       const isAdmin = (userData.email === ADMIN_EMAIL);
       document.getElementById('username-display').innerHTML = `@${userData.username} ${isAdmin ? '<span style="font-size:0.75rem; background:var(--brand-orange); color:white; padding:2px 8px; border-radius:10px; margin-left:6px; vertical-align:middle;">👑 Creator</span>' : ''}`;
       
@@ -525,7 +523,6 @@
       const { error } = await supabaseClient.auth.updateUser({ email: newEmail });
       if (error) { alert("Errore richiesta cambio email: " + error.message); return; }
 
-      // Aggiorniamo anche nella tabella profiles
       await supabaseClient.from('profiles').update({ email: newEmail }).eq('id', userData.id);
 
       userData.email = newEmail;
@@ -565,7 +562,6 @@
       alert("Username aggiornato con successo! 🎉");
     }
 
-    /* DISCONNESSIONE ACCOUNT */
     async function logoutUser() {
       if (confirm("Vuoi davvero disconnetterti dal tuo account?")) {
         await supabaseClient.auth.signOut();
@@ -576,50 +572,111 @@
       }
     }
 
-    /* ESPLORA UTENTI E SEGUI CON ID */
+    /* ESPLORA UTENTI & GESTIONE FOLLOW STILE INSTAGRAM */
     async function openUsersModal(type) {
       const titleEl = document.getElementById('users-modal-title');
       const container = document.getElementById('users-list-container');
       
       if (type === 'explore') {
         titleEl.innerText = 'Esplora Utenti DayCap 🌍';
-        const { data: profiles, error } = await supabaseClient.from('profiles').select('id, username, email');
+        const { data: profiles, error } = await supabaseClient.from('profiles').select('id, username, email, profile_pic');
 
         if (error || !profiles || profiles.length === 0) {
           container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun utente trovato.</p>';
         } else {
           container.innerHTML = profiles
             .filter(p => p.id !== userData.id)
-            .map(p => `
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-main); border-radius: 8px;">
-                <span>@${p.username} ${p.email === ADMIN_EMAIL ? '👑' : ''}</span>
-                <button class="btn" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="followUser('${p.id}', '${p.username}')">Segui ➕</button>
-              </div>
-            `).join('');
+            .map(p => {
+              const isFollowing = userData.following && userData.following.includes(p.username);
+              const avatarHTML = p.profile_pic 
+                ? `<img src="${p.profile_pic}" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">`
+                : `<div style="width:36px; height:36px; border-radius:50%; background:var(--brand-orange); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;">${p.username.charAt(0).toUpperCase()}</div>`;
+              
+              return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-main); border-radius: 8px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    ${avatarHTML}
+                    <span>@${p.username} ${p.email === ADMIN_EMAIL ? '👑' : ''}</span>
+                  </div>
+                  <button class="btn ${isFollowing ? 'btn-secondary' : ''}" style="width: auto; padding: 6px 14px; font-size: 0.75rem;" onclick="toggleFollow('${p.username}', ${isFollowing})">
+                    ${isFollowing ? 'Segui già ✓' : 'Segui ➕'}
+                  </button>
+                </div>
+              `;
+            }).join('');
         }
       } else if (type === 'followers') {
         titleEl.innerText = 'I tuoi Follower';
         const list = userData.followers || [];
-        container.innerHTML = list.length === 0 ? '<p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun follower al momento.</p>' : list.map(f => `<div style="padding: 10px; background: var(--bg-main); border-radius: 8px;"><span>@${f}</span></div>`).join('');
+        if (list.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Nessun follower al momento.</p>';
+        } else {
+          const { data: profs } = await supabaseClient.from('profiles').select('username, profile_pic').in('username', list);
+          container.innerHTML = (profs || []).map(p => {
+            const avatarHTML = p.profile_pic 
+              ? `<img src="${p.profile_pic}" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">`
+              : `<div style="width:36px; height:36px; border-radius:50%; background:var(--brand-orange); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;">${p.username.charAt(0).toUpperCase()}</div>`;
+            return `
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-main); border-radius: 8px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  ${avatarHTML}
+                  <span style="font-weight:600;">@${p.username}</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
       } else {
         titleEl.innerText = 'Persone che segui';
         const list = userData.following || [];
-        container.innerHTML = list.length === 0 ? '<p style="color: var(--text-secondary); font-size: 0.9rem;">Non stai seguendo nessuno.</p>' : list.map(f => `<div style="padding: 10px; background: var(--bg-main); border-radius: 8px;"><span>@${f}</span></div>`).join('');
+        if (list.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">Non stai seguendo nessuno.</p>';
+        } else {
+          const { data: profs } = await supabaseClient.from('profiles').select('username, profile_pic').in('username', list);
+          container.innerHTML = (profs || []).map(p => {
+            const avatarHTML = p.profile_pic 
+              ? `<img src="${p.profile_pic}" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">`
+              : `<div style="width:36px; height:36px; border-radius:50%; background:var(--brand-orange); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;">${p.username.charAt(0).toUpperCase()}</div>`;
+            return `
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-main); border-radius: 8px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  ${avatarHTML}
+                  <span style="font-weight:600;">@${p.username}</span>
+                </div>
+                <button class="btn btn-secondary" style="width:auto; padding:4px 10px; font-size:0.7rem;" onclick="toggleFollow('${p.username}', true)">Smetti di seguire</button>
+              </div>
+            `;
+          }).join('');
+        }
       }
       openModal('users-list-modal');
     }
 
-    async function followUser(targetId, targetUsername) {
-      if (!userData.following) userData.following = [];
-      if (userData.following.includes(targetUsername)) { alert(`Segui già @${targetUsername}!`); return; }
+    async function toggleFollow(targetUsername, isCurrentlyFollowing) {
+      if (isCurrentlyFollowing) {
+        const confirmUnfollow = confirm(`Vuoi smettere di seguire @${targetUsername}?`);
+        if (!confirmUnfollow) return;
 
-      const { error } = await supabaseClient.from('follows').insert([{ follower_id: userData.id, following_id: targetId }]);
-      if (error) { alert("Errore: " + error.message); return; }
+        const { error } = await supabaseClient
+          .from('follows')
+          .delete()
+          .eq('follower', userData.username)
+          .eq('following', targetUsername);
 
-      userData.following.push(targetUsername);
+        if (error) { alert("Errore: " + error.message); return; }
+        userData.following = userData.following.filter(u => u !== targetUsername);
+      } else {
+        const { error } = await supabaseClient
+          .from('follows')
+          .insert([{ follower: userData.username, following: targetUsername }]);
+
+        if (error) { alert("Errore: " + error.message); return; }
+        if (!userData.following) userData.following = [];
+        userData.following.push(targetUsername);
+      }
+
       localStorage.setItem('daycap_userData', JSON.stringify(userData));
       initUI();
-      alert(`Ora segui @${targetUsername}! 🎉`);
       closeModal('users-list-modal');
     }
 
@@ -630,7 +687,11 @@
       const { data: foundUser, error } = await supabaseClient.from('profiles').select('*').eq('username', query);
       if (error || !foundUser || foundUser.length === 0) { alert(`L'utente @${query} non esiste!`); return; }
 
-      await followUser(foundUser[0].id, foundUser[0].username);
+      const target = foundUser[0];
+      if (target.username === userData.username) { alert("Non puoi seguire te stesso!"); return; }
+
+      const isFollowing = userData.following && userData.following.includes(target.username);
+      await toggleFollow(target.username, isFollowing);
       document.getElementById('search-user-input').value = '';
     }
 
@@ -981,12 +1042,16 @@
 
     /* UTILITY */
     function triggerAvatarUpload() { document.getElementById('avatar-file-input').click(); }
-    function changeProfilePicture(e) {
+    async function changeProfilePicture(e) {
       const file = e.target.files[0];
       if (!file) return;
       const r = new FileReader();
-      r.onload = function(evt) {
+      r.onload = async function(evt) {
         userData.profilePic = evt.target.result;
+        
+        // Aggiorna anche nel database Supabase
+        await supabaseClient.from('profiles').update({ profile_pic: userData.profilePic }).eq('id', userData.id);
+
         localStorage.setItem('daycap_userData', JSON.stringify(userData));
         initUI();
       };
