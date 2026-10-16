@@ -26,7 +26,7 @@
         if (error) {
             console.error('Errore di connessione a Supabase:', error.message);
         } else {
-            console.log('⚡ Connessione a Supabase riuscita! Dati:', data);
+            console.log('⚡ Connessione a Supabase riuscita!');
         }
     }
     testSupabaseConnection();
@@ -271,12 +271,12 @@
     </div>
   </div>
 
-  <!-- MODALE POSTA / NOTIFICHE RICHIESTE FOLLOW -->
+  <!-- POSTA 📩 -->
   <div class="modal" id="inbox-modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 15px;">La Tua Posta 📩</h3>
       <div id="notifications-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;">
-        <p style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-size: 0.85rem;">Nessuna nuova notifica.</p>
+        <p style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-size: 0.85rem;">Nessuna notifica.</p>
       </div>
       <button class="btn btn-secondary" style="margin-top:15px;" onclick="closeModal('inbox-modal')">Chiudi</button>
     </div>
@@ -303,7 +303,7 @@
     let activeCircleIndex = null;
     let activeSlotHour = null;
     let activeHighlightIndex = null;
-    let pendingFollowRequests = [];
+    let pendingSentRequests = []; // id degli utenti a cui abbiamo chiesto il follow
 
     function generateUniqueId() {
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -453,11 +453,11 @@
       document.getElementById('auth-step-1').style.display = 'block';
     }
 
-    /* CARICAMENTO FOLLOW E RICHIESTE IN SOSPESO */
+    /* CARICAMENTO FOLLOW E NOTIFICHE CLOUD */
     async function loadFollowData() {
       if (!userData || !userData.id) return;
 
-      // 1. Persone che segui
+      // 1. Seguiti
       const { data: followingRows } = await supabaseClient
         .from('follows')
         .select('following_id')
@@ -471,7 +471,7 @@
         userData.following = [];
       }
 
-      // 2. Persone che ti seguono (Follower confermati)
+      // 2. Follower
       const { data: followerRows } = await supabaseClient
         .from('follows')
         .select('follower_id')
@@ -485,13 +485,26 @@
         userData.followers = [];
       }
 
-      // 3. Richieste di Follow in arrivo (salvate in localStorage/cloud)
-      pendingFollowRequests = JSON.parse(localStorage.getItem(`daycap_requests_${userData.id}`)) || [];
+      // 3. Richieste che ABBIAMO INVIATO NOI (per mostrare 'Richiesta Inviata')
+      const { data: sentRequests } = await supabaseClient
+        .from('follow_requests')
+        .select('to_id')
+        .eq('from_id', userData.id)
+        .eq('status', 'pending');
+      
+      pendingSentRequests = sentRequests ? sentRequests.map(r => r.to_id) : [];
 
-      // Aggiorna Badge Notifiche Posta
+      // 4. Richieste IN ARRIVO nella nostra POSTA
+      const { data: inComingReqs } = await supabaseClient
+        .from('follow_requests')
+        .select('*')
+        .eq('to_id', userData.id);
+
       const badge = document.getElementById('inbox-badge');
-      if (pendingFollowRequests.length > 0) {
-        badge.innerText = pendingFollowRequests.length;
+      const unreadCount = inComingReqs ? inComingReqs.filter(r => r.status === 'pending' || r.status === 'accepted_notified').length : 0;
+
+      if (unreadCount > 0) {
+        badge.innerText = unreadCount;
         badge.style.display = 'inline-block';
       } else {
         badge.style.display = 'none';
@@ -582,7 +595,7 @@
       }
     }
 
-    /* ESPLORA E INVIO RICHIESTA FOLLOW */
+    /* ESPLORA E INVIO RICHIESTE CLOUD */
     async function openUsersModal(type) {
       const titleEl = document.getElementById('users-modal-title');
       const container = document.getElementById('users-list-container');
@@ -598,18 +611,25 @@
             .filter(p => p.id !== userData.id)
             .map(p => {
               const isFollowing = userData.following && userData.following.includes(p.username);
+              const isPending = pendingSentRequests.includes(p.id);
+
               const avatarHTML = p.profile_pic 
                 ? `<img src="${p.profile_pic}" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">`
                 : `<div style="width:36px; height:36px; border-radius:50%; background:var(--brand-orange); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;">${p.username.charAt(0).toUpperCase()}</div>`;
               
+              let btnText = 'Richiedi 📩';
+              let btnClass = 'btn';
+              if (isFollowing) { btnText = 'Segui già ✓'; btnClass = 'btn btn-secondary'; }
+              else if (isPending) { btnText = 'In attesa ⏳'; btnClass = 'btn btn-secondary'; }
+
               return `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-main); border-radius: 8px;">
                   <div style="display:flex; align-items:center; gap:10px;">
                     ${avatarHTML}
                     <span>@${p.username} ${p.email === ADMIN_EMAIL ? '👑' : ''}</span>
                   </div>
-                  <button class="btn ${isFollowing ? 'btn-secondary' : ''}" style="width: auto; padding: 6px 14px; font-size: 0.75rem;" onclick="requestOrUnfollow('${p.username}', ${isFollowing})">
-                    ${isFollowing ? 'Smetti di seguire' : 'Richiedi 📩'}
+                  <button class="${btnClass}" style="width: auto; padding: 6px 14px; font-size: 0.75rem;" onclick="requestOrUnfollow('${p.username}', ${isFollowing}, ${isPending})">
+                    ${btnText}
                   </button>
                 </div>
               `;
@@ -636,7 +656,7 @@
           container.innerHTML = list.map(u => `
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-main); border-radius: 8px;">
               <span style="font-weight:600;">@${u}</span>
-              <button class="btn btn-secondary" style="width:auto; padding:4px 10px; font-size:0.7rem;" onclick="requestOrUnfollow('${u}', true)">Smetti di seguire</button>
+              <button class="btn btn-secondary" style="width:auto; padding:4px 10px; font-size:0.7rem;" onclick="requestOrUnfollow('${u}', true, false)">Smetti di seguire</button>
             </div>
           `).join('');
         }
@@ -644,7 +664,7 @@
       openModal('users-list-modal');
     }
 
-    async function requestOrUnfollow(targetUsername, isCurrentlyFollowing) {
+    async function requestOrUnfollow(targetUsername, isCurrentlyFollowing, isPending) {
       const { data: targetProf } = await supabaseClient
         .from('profiles')
         .select('id')
@@ -654,7 +674,6 @@
       if (!targetProf) { alert("Utente non trovato!"); return; }
 
       if (isCurrentlyFollowing) {
-        // Se lo stiamo già seguendo, smettiamo di seguirlo direttamente
         if (confirm(`Vuoi smettere di seguire @${targetUsername}?`)) {
           await supabaseClient
             .from('follows')
@@ -666,24 +685,26 @@
           initUI();
           closeModal('users-list-modal');
         }
+      } else if (isPending) {
+        alert(`Hai già inviato una richiesta a @${targetUsername}. In attesa che accetti!`);
       } else {
-        // Se NON lo seguiamo, gli inviamo la RICHIESTA NELLA POSTA
-        let reqList = JSON.parse(localStorage.getItem(`daycap_requests_${targetProf.id}`)) || [];
-        
-        // Controlla se la richiesta è già stata inviata
-        if (reqList.some(r => r.fromId === userData.id)) {
-          alert(`Hai già inviato una richiesta a @${targetUsername}! In attesa che accetti.`);
+        // Invio reale su Supabase
+        const { error } = await supabaseClient
+          .from('follow_requests')
+          .insert([{
+            from_id: userData.id,
+            from_username: userData.username,
+            to_id: targetProf.id,
+            status: 'pending'
+          }]);
+
+        if (error) {
+          alert("Errore nell'invio della richiesta: " + error.message);
           return;
         }
 
-        reqList.push({
-          fromId: userData.id,
-          fromUsername: userData.username,
-          date: new Date().toLocaleDateString()
-        });
-
-        localStorage.setItem(`daycap_requests_${targetProf.id}`, JSON.stringify(reqList));
-        alert(`📩 Richiesta inviata a @${targetUsername}! Potrai seguirlo appena accetterà.`);
+        alert(`📩 Richiesta inviata a @${targetUsername}!`);
+        await loadFollowData();
         closeModal('users-list-modal');
       }
     }
@@ -699,62 +720,115 @@
       if (target.username === userData.username) { alert("Non puoi seguire te stesso!"); return; }
 
       const isFollowing = userData.following && userData.following.includes(target.username);
-      await requestOrUnfollow(target.username, isFollowing);
+      const isPending = pendingSentRequests.includes(target.id);
+
+      await requestOrUnfollow(target.username, isFollowing, isPending);
       document.getElementById('search-user-input').value = '';
     }
 
-    /* POSTA 📩 - ACCETTA / RIFIUTA RICHIESTE */
-    function openInboxModal() {
+    /* POSTA 📩 - GESTIONE NOTIFICHE CLOUD (IN ARRIVO E CONFERME) */
+    async function openInboxModal() {
       const container = document.getElementById('notifications-list');
-      pendingFollowRequests = JSON.parse(localStorage.getItem(`daycap_requests_${userData.id}`)) || [];
 
-      if (pendingFollowRequests.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-size: 0.85rem;">Nessuna nuova richiesta di follow.</p>';
-      } else {
-        container.innerHTML = pendingFollowRequests.map((req, index) => `
+      // 1. Richieste in arrivo per NOI (da accettare/rifiutare)
+      const { data: inComingReqs } = await supabaseClient
+        .from('follow_requests')
+        .select('*')
+        .eq('to_id', userData.id)
+        .eq('status', 'pending');
+
+      // 2. Notifiche che gli ALTRI hanno accettato le NOSTRE richieste
+      const { data: acceptedReqs } = await supabaseClient
+        .from('follow_requests')
+        .select('*')
+        .eq('from_id', userData.id)
+        .eq('status', 'accepted_notified');
+
+      let html = '';
+
+      if (inComingReqs && inComingReqs.length > 0) {
+        html += inComingReqs.map(req => `
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-main); border-radius: 10px; border: 1px solid var(--border-color);">
             <div>
-              <div style="font-weight: 600; font-size: 0.9rem;">@${req.fromUsername}</div>
-              <div style="font-size: 0.75rem; color: var(--text-secondary);">Vuoi iniziare a seguirti</div>
+              <div style="font-weight: 600; font-size: 0.9rem;">@${req.from_username}</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">Ha chiesto di seguirti</div>
             </div>
             <div style="display: flex; gap: 6px;">
-              <button class="btn" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--brand-orange);" onclick="acceptFollowRequest(${index})">Accetta</button>
-              <button class="btn btn-secondary" style="width: auto; padding: 6px 10px; font-size: 0.75rem;" onclick="rejectFollowRequest(${index})">Rifiuta</button>
+              <button class="btn" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--brand-orange);" onclick="acceptFollowRequest(${req.id}, '${req.from_id}', '${req.from_username}')">Accetta</button>
+              <button class="btn btn-secondary" style="width: auto; padding: 6px 10px; font-size: 0.75rem;" onclick="rejectFollowRequest(${req.id})">Rifiuta</button>
             </div>
           </div>
         `).join('');
       }
 
+      if (acceptedReqs && acceptedReqs.length > 0) {
+        html += acceptedReqs.map(req => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-main); border-radius: 10px; border: 1px solid var(--brand-orange);">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">🎉 Richiesta Accettata!</div>
+              <div style="font-size: 0.8rem; color: var(--brand-orange);">L'utente ha accettato la tua richiesta di follow.</div>
+            </div>
+            <button class="btn btn-secondary" style="width: auto; padding: 4px 8px; font-size: 0.7rem;" onclick="clearAcceptedNotification(${req.id})">OK</button>
+          </div>
+        `).join('');
+      }
+
+      // 3. Notifiche delle richieste che ABBIAMO INVIATO NOI e sono ancora in attesa
+      const { data: sentPending } = await supabaseClient
+        .from('follow_requests')
+        .select('to_id')
+        .eq('from_id', userData.id)
+        .eq('status', 'pending');
+
+      if (sentPending && sentPending.length > 0) {
+        const toIds = sentPending.map(r => r.to_id);
+        const { data: sentUsers } = await supabaseClient.from('profiles').select('username').in('id', toIds);
+        
+        if (sentUsers && sentUsers.length > 0) {
+          html += sentUsers.map(u => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: var(--bg-main); border-radius: 10px; opacity:0.8;">
+              <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                📩 Richiesta inviata a <strong style="color:white;">@${u.username}</strong> (In attesa...)
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      if (!html) {
+        html = '<p style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-size: 0.85rem;">Nessuna notifica in posta.</p>';
+      }
+
+      container.innerHTML = html;
       openModal('inbox-modal');
     }
 
-    async function acceptFollowRequest(index) {
-      const req = pendingFollowRequests[index];
-      if (!req) return;
-
-      // Inseriamo la relazione ufficiale nel DB Supabase
-      const { error } = await supabaseClient
+    async function acceptFollowRequest(requestId, fromUserId, fromUsername) {
+      // 1. Aggiungiamo il follow vero e proprio
+      await supabaseClient
         .from('follows')
-        .insert([{ follower_id: req.fromId, following_id: userData.id }]);
+        .insert([{ follower_id: fromUserId, following_id: userData.id }]);
 
-      if (error && error.code !== '23505') {
-        alert("Errore nell'accettare la richiesta: " + error.message);
-        return;
-      }
+      // 2. Aggiorniamo lo stato della richiesta per notificare chi l'ha inviata
+      await supabaseClient
+        .from('follow_requests')
+        .update({ status: 'accepted_notified' })
+        .eq('id', requestId);
 
-      // Rimuoviamo la richiesta dalla lista in sospeso
-      pendingFollowRequests.splice(index, 1);
-      localStorage.setItem(`daycap_requests_${userData.id}`, JSON.stringify(pendingFollowRequests));
-
-      alert(`🎉 Ora @${req.fromUsername} ti segue!`);
+      alert(`🎉 Ora @${fromUsername} ti segue!`);
       await loadFollowData();
       initUI();
       openInboxModal();
     }
 
-    function rejectFollowRequest(index) {
-      pendingFollowRequests.splice(index, 1);
-      localStorage.setItem(`daycap_requests_${userData.id}`, JSON.stringify(pendingFollowRequests));
+    async function rejectFollowRequest(requestId) {
+      await supabaseClient.from('follow_requests').delete().eq('id', requestId);
+      openInboxModal();
+      await loadFollowData();
+    }
+
+    async function clearAcceptedNotification(requestId) {
+      await supabaseClient.from('follow_requests').delete().eq('id', requestId);
       openInboxModal();
     }
 
