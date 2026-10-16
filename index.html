@@ -457,24 +457,26 @@
       document.getElementById('auth-step-1').style.display = 'block';
     }
 
+    /* CARICAMENTO E GESTIONE FOLLOW CORRETTO (follower_id / following_id) */
     async function loadFollowData() {
       if (!userData) return;
       
-      // Carica i seguiti
-      const { data: followingData } = await supabaseClient
+      const { data: followingData, error: err1 } = await supabaseClient
         .from('follows')
-        .select('following')
-        .eq('follower', userData.username);
+        .select('following_id, profiles!follows_following_id_fkey(username)')
+        .eq('follower_id', userData.id);
       
-      userData.following = followingData ? followingData.map(f => f.following) : [];
+      if (err1) console.error("Errore caricamento seguiti:", err1.message);
+      userData.following = followingData ? followingData.map(f => f.profiles ? f.profiles.username : null).filter(Boolean) : [];
 
-      // Carica i follower
-      const { data: followerData } = await supabaseClient
+      const { data: followerData, error: err2 } = await supabaseClient
         .from('follows')
-        .select('follower')
-        .eq('following', userData.username);
+        .select('follower_id, profiles!follows_follower_id_fkey(username)')
+        .eq('following_id', userData.id);
 
-      userData.followers = followerData ? followerData.map(f => f.follower) : [];
+      if (err2) console.error("Errore caricamento follower:", err2.message);
+      userData.followers = followerData ? followerData.map(f => f.profiles ? f.profiles.username : null).filter(Boolean) : [];
+
       localStorage.setItem('daycap_userData', JSON.stringify(userData));
     }
 
@@ -572,7 +574,7 @@
       }
     }
 
-    /* ESPLORA UTENTI & GESTIONE FOLLOW STILE INSTAGRAM */
+    /* ESPLORA UTENTI & GESTIONE FOLLOW CON ID */
     async function openUsersModal(type) {
       const titleEl = document.getElementById('users-modal-title');
       const container = document.getElementById('users-list-container');
@@ -653,6 +655,19 @@
     }
 
     async function toggleFollow(targetUsername, isCurrentlyFollowing) {
+      const { data: targetProf, error: pErr } = await supabaseClient
+        .from('profiles')
+        .select('id')
+        .eq('username', targetUsername)
+        .single();
+
+      if (pErr || !targetProf) {
+        alert("Impossibile trovare l'utente specificato.");
+        return;
+      }
+
+      const targetId = targetProf.id;
+
       if (isCurrentlyFollowing) {
         const confirmUnfollow = confirm(`Vuoi smettere di seguire @${targetUsername}?`);
         if (!confirmUnfollow) return;
@@ -660,15 +675,15 @@
         const { error } = await supabaseClient
           .from('follows')
           .delete()
-          .eq('follower', userData.username)
-          .eq('following', targetUsername);
+          .eq('follower_id', userData.id)
+          .eq('following_id', targetId);
 
         if (error) { alert("Errore: " + error.message); return; }
         userData.following = userData.following.filter(u => u !== targetUsername);
       } else {
         const { error } = await supabaseClient
           .from('follows')
-          .insert([{ follower: userData.username, following: targetUsername }]);
+          .insert([{ follower_id: userData.id, following_id: targetId }]);
 
         if (error) { alert("Errore: " + error.message); return; }
         if (!userData.following) userData.following = [];
@@ -676,6 +691,7 @@
       }
 
       localStorage.setItem('daycap_userData', JSON.stringify(userData));
+      await loadFollowData();
       initUI();
       closeModal('users-list-modal');
     }
@@ -1049,7 +1065,6 @@
       r.onload = async function(evt) {
         userData.profilePic = evt.target.result;
         
-        // Aggiorna anche nel database Supabase
         await supabaseClient.from('profiles').update({ profile_pic: userData.profilePic }).eq('id', userData.id);
 
         localStorage.setItem('daycap_userData', JSON.stringify(userData));
