@@ -457,7 +457,7 @@
       document.getElementById('auth-step-1').style.display = 'block';
     }
 
-    /* CARICAMENTO E GESTIONE FOLLOW CORRETTO (follower_id / following_id) */
+    /* CARICAMENTO FOLLOW */
     async function loadFollowData() {
       if (!userData) return;
       
@@ -574,7 +574,7 @@
       }
     }
 
-    /* ESPLORA UTENTI & GESTIONE FOLLOW CON ID */
+    /* ESPLORA UTENTI & GESTIONE FOLLOW (CON SICUREZZA DOPPIONI) */
     async function openUsersModal(type) {
       const titleEl = document.getElementById('users-modal-title');
       const container = document.getElementById('users-list-container');
@@ -668,7 +668,15 @@
 
       const targetId = targetProf.id;
 
-      if (isCurrentlyFollowing) {
+      const { data: existingFollow } = await supabaseClient
+        .from('follows')
+        .select('*')
+        .eq('follower_id', userData.id)
+        .eq('following_id', targetId);
+
+      const alreadyFollowingInDB = existingFollow && existingFollow.length > 0;
+
+      if (isCurrentlyFollowing || alreadyFollowingInDB) {
         const confirmUnfollow = confirm(`Vuoi smettere di seguire @${targetUsername}?`);
         if (!confirmUnfollow) return;
 
@@ -678,14 +686,21 @@
           .eq('follower_id', userData.id)
           .eq('following_id', targetId);
 
-        if (error) { alert("Errore: " + error.message); return; }
+        if (error) { alert("Errore durante l'unfollow: " + error.message); return; }
         userData.following = userData.following.filter(u => u !== targetUsername);
       } else {
         const { error } = await supabaseClient
           .from('follows')
           .insert([{ follower_id: userData.id, following_id: targetId }]);
 
-        if (error) { alert("Errore: " + error.message); return; }
+        if (error) {
+          if (error.code === '23505') {
+            alert("Segui già questo utente!");
+          } else {
+            alert("Errore: " + error.message);
+          }
+          return;
+        }
         if (!userData.following) userData.following = [];
         userData.following.push(targetUsername);
       }
